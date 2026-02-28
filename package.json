@@ -1,22 +1,22 @@
 {
   "name": "photoswipe",
   "version": "5.4.4",
-  "main": "dist/photoswipe.esm.js",
-  "style": "dist/photoswipe.css",
+  "main": "src/js/photoswipe.js",
+  "style": "src/photoswipe.css",
   "type": "module",
   "types": "./dist/types/photoswipe.d.ts",
   "exports": {
     ".": {
       "types": "./dist/types/photoswipe.d.ts",
-      "default": "./dist/photoswipe.esm.js"
+      "default": "./src/js/photoswipe.js"
     },
     "./lightbox": {
       "types": "./dist/types/lightbox/lightbox.d.ts",
-      "default": "./dist/photoswipe-lightbox.esm.js"
+      "default": "./src/js/lightbox/lightbox.js"
     },
-    "./dist/photoswipe.css": "./dist/photoswipe.css",
-    "./photoswipe.css": "./dist/photoswipe.css",
-    "./style.css": "./dist/photoswipe.css"
+    "./dist/photoswipe.css": "./src/photoswipe.css",
+    "./photoswipe.css": "./src/photoswipe.css",
+    "./style.css": "./src/photoswipe.css"
   },
   "typesVersions": {
     "*": {
@@ -47,9 +47,15 @@
     "lint": "eslint src/js/**/*.js",
     "lint-auto-fix": "eslint src/js/**/*.js --fix",
     "test": "npm run lint",
-    "tsc": "tsc"
+    "tsc": "tsc",
+    "dev": "vite",
+    "dev:lan": "vite --host"
   },
   "devDependencies": {
+    "@vitejs/plugin-vue": "^5.2.1",
+    "vue": "^3.5.13",
+    "image-size": "^1.1.1",
+    "vite": "^5.4.0",
     "@babel/core": "^7.18.0",
     "@babel/eslint-parser": "^7.17.0",
     "@babel/plugin-syntax-class-properties": "^7.12.13",
@@ -69,13 +75,8 @@
   },
   "repository": {
     "type": "git",
-    "url": "git://github.com/dimsemenov/Photoswipe.git"
+    "url": "git@github.com:cmtheit/PhotoSwipe-reactive.git"
   },
-  "description": "JavaScript gallery",
-  "bugs": {
-    "url": "https://github.com/dimsemenov/Photoswipe/issues"
-  },
-  "homepage": "https://photoswipe.com",
   "keywords": [
     "gallery",
     "lightbox",
@@ -85,6 +86,6 @@
     "swipe",
     "zoom"
   ],
-  "author": "Dmytro Semenov (https://dimsemenov.com)",
+  "author": "cmtheit (fork from Dmytro Semenov (https://dimsemenov.com))",
   "license": "MIT"
 }

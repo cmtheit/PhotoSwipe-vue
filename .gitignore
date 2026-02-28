@@ -30,3 +30,5 @@ website/dist/
 .vscode
 .node-version
 .sass-cache/
+images/*
+!images/.gitkeep
