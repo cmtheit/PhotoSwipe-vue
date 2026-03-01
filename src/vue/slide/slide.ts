@@ -190,14 +190,7 @@ export class Slide implements SlideInstance {
 
     (this.content as Content).updateData(newData, this.index);
     this.calculateSize();
-    updatePanBounds(
-      this.bounds,
-      this._slideInfo(),
-      this.currZoomLevel,
-      this._viewportOptions()
-    );
-    this.pan.x = this.bounds.correctPan('x', this.pan.x);
-    this.pan.y = this.bounds.correctPan('y', this.pan.y);
+    this.zoomAndPanToInitial();
     this.applyCurrentZoomPan();
     this.updateContentSize(this.width !== prevWidth || this.height !== prevHeight);
   }

@@ -11,8 +11,6 @@
     "checkJs": true,
   },
   "include": [
-    "global.d.ts",
-    "src/js/**/*",
     "src/vue/**/*"
   ],
 }

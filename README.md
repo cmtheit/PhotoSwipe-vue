@@ -19,8 +19,8 @@ bun add photoswipe-vue
 If you use this package from a monorepo or local path:
 
 ```bash
-npm install <path-to-photoswipe-reactive>
-# e.g. npm install ../packages/photoswipe-reactive
+npm install <path-to-photoswipe-vue>
+# e.g. npm install ../packages/photoswipe-vue
 ```
 
 Peer dependency: **Vue 3**. The package exposes the Vue component and source; your bundler (Vite, Vue CLI, etc.) will compile it.

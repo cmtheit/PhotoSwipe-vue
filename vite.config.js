@@ -9,7 +9,15 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = resolve(__dirname, '');
 const imagesDir = resolve(root, 'images');
 
-const IMAGE_EXT = new Set(['.jpg', '.jpeg', '.png', '.gif', '.webp', '.avif', '.svg']);
+const IMAGE_EXT = new Set([
+  '.jpg',
+  '.jpeg',
+  '.png',
+  '.gif',
+  '.webp',
+  '.avif',
+  '.svg',
+]);
 const DEFAULT_WIDTH = 1920;
 const DEFAULT_HEIGHT = 1080;
 
@@ -22,7 +30,10 @@ function listImageFiles(dir, base = '') {
     const full = resolve(dir, e.name);
     if (e.isDirectory()) {
       out.push(...listImageFiles(full, rel));
-    } else if (e.isFile() && IMAGE_EXT.has(rel.slice(rel.lastIndexOf('.')).toLowerCase())) {
+    } else if (
+      e.isFile() &&
+      IMAGE_EXT.has(rel.slice(rel.lastIndexOf('.')).toLowerCase())
+    ) {
       out.push(rel);
     }
   }
@@ -63,9 +74,19 @@ function imagesApiPlugin() {
           const files = listImageFiles(imagesDir);
           const all = files.map((f) => getImageItem(f));
           const u = new URL(url, 'http://localhost');
-          const count = Math.min(Math.max(1, parseInt(u.searchParams.get('count') || '1', 10)), 100);
+          const count = Math.min(
+            Math.max(1, parseInt(u.searchParams.get('count') || '1', 10)),
+            100,
+          );
           let exclude = u.searchParams.get('exclude');
-          const excludeSet = new Set(exclude ? exclude.split(',').map((s) => s.trim()).filter(Boolean) : []);
+          const excludeSet = new Set(
+            exclude
+              ? exclude
+                  .split(',')
+                  .map((s) => s.trim())
+                  .filter(Boolean)
+              : [],
+          );
           const pool = all.filter((item) => !excludeSet.has(item.id));
           const shuffled = pool.slice().sort(() => Math.random() - 0.5);
           const picked = shuffled.slice(0, count);
@@ -78,9 +99,15 @@ function imagesApiPlugin() {
       // 挂载 images 目录为静态资源，便于 /images/xxx 访问
       server.middlewares.use('/images', (req, res, next) => {
         if (req.method !== 'GET' || !req.url) return next();
-        const pathname = decodeURIComponent(req.url).replace(/^\//, '').replace(/\.\./g, '');
+        const pathname = decodeURIComponent(req.url)
+          .replace(/^\//, '')
+          .replace(/\.\./g, '');
         const file = resolve(imagesDir, pathname);
-        if (!file.startsWith(imagesDir) || !fs.existsSync(file) || !fs.statSync(file).isFile()) {
+        if (
+          !file.startsWith(imagesDir) ||
+          !fs.existsSync(file) ||
+          !fs.statSync(file).isFile()
+        ) {
           return next();
         }
         res.setHeader('Content-Type', getMime(pathname));
@@ -92,7 +119,15 @@ function imagesApiPlugin() {
 
 function getMime(pathname) {
   const ext = pathname.slice(pathname.lastIndexOf('.')).toLowerCase();
-  const mime = { '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.gif': 'image/gif', '.webp': 'image/webp', '.avif': 'image/avif', '.svg': 'image/svg+xml' };
+  const mime = {
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.png': 'image/png',
+    '.gif': 'image/gif',
+    '.webp': 'image/webp',
+    '.avif': 'image/avif',
+    '.svg': 'image/svg+xml',
+  };
   return mime[ext] || 'application/octet-stream';
 }
 
@@ -109,5 +144,5 @@ export default defineConfig({
   server: {
     host: true,
     port: 5173,
-  }
+  },
 });

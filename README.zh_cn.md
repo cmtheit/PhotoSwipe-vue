@@ -20,7 +20,7 @@ bun add photoswipe-vue
 
 ```bash
 npm install <本包路径>
-# 例如：npm install ../packages/photoswipe-reactive
+# 例如：npm install ../packages/photoswipe-vue
 ```
 
 依赖：**Vue 3**。包内为 Vue 组件与源码，由你的构建工具（Vite、Vue CLI 等）参与编译。
