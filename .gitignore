@@ -32,3 +32,5 @@ website/dist/
 .sass-cache/
 images/*
 !images/.gitkeep
+.cursor
+/bun.lock

@@ -103,10 +103,11 @@ export default defineConfig({
     alias: {
       photoswipe: resolve(root, 'src/js/photoswipe.js'),
       'photoswipe/lightbox': resolve(root, 'src/js/lightbox/lightbox.js'),
+      'photoswipe/vue': resolve(root, 'src/vue/index.ts'),
     },
   },
   server: {
     host: true,
     port: 5173,
-  },
+  }
 });

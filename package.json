@@ -1,6 +1,6 @@
 {
-  "name": "photoswipe",
-  "version": "5.4.4",
+  "name": "photoswipe-vue",
+  "version": "0.1.0",
   "main": "src/js/photoswipe.js",
   "style": "src/photoswipe.css",
   "type": "module",
@@ -13,6 +13,11 @@
     "./lightbox": {
       "types": "./dist/types/lightbox/lightbox.d.ts",
       "default": "./src/js/lightbox/lightbox.js"
+    },
+    "./vue": {
+      "types": "./src/vue/types.ts",
+      "import": "./src/vue/PhotoSwipe.vue",
+      "default": "./src/vue/PhotoSwipe.vue"
     },
     "./dist/photoswipe.css": "./src/photoswipe.css",
     "./photoswipe.css": "./src/photoswipe.css",
@@ -28,50 +33,39 @@
   "files": [
     "dist",
     "src",
-    "README.md"
+    "README.md",
+    "README.zh_cn.md"
   ],
   "engines": {
     "node": ">= 0.12.0"
   },
   "scripts": {
-    "build": "npm run build-and-minify-js && npm run build-css && npm run copy-to-dist",
-    "watch": "concurrently \"npm:watch-js\" \"npm:watch-css\" \"npm:watch-docs\"",
-    "watch-local": "concurrently \"npm:watch-js\" \"npm:watch-css\" \"npm:watch-docs-local\"",
-    "build-and-minify-js": "rollup --config build/rollup.config.js && npm run tsc",
-    "watch-js": "rollup --config build/rollup.config.watch.js --watch",
-    "build-css": "copyfiles -f src/*.css dist/ && copyfiles -f src/*.css demo-docs-website/static/photoswipe/",
-    "watch-css": "chokidar \"src/*.css\" --command \"npm run build-css\"",
-    "watch-docs": "cd demo-docs-website/ && npm start",
-    "watch-docs-local": "cd demo-docs-website/ && npm start -- --host 192.168.1.120",
-    "copy-to-dist": "copyfiles -f demo-docs-website/static/photoswipe/* dist/ && copyfiles -f demo-docs-website/static/photoswipe/umd/* dist/umd/",
+    "build": "npm run build:css && npm run build:vue",
+    "build:css": "copyfiles -f src/photoswipe.css dist/",
+    "build:vue": "vite build --config vite.lib.config.js",
     "lint": "eslint src/js/**/*.js",
     "lint-auto-fix": "eslint src/js/**/*.js --fix",
-    "test": "npm run lint",
     "tsc": "tsc",
     "dev": "vite",
-    "dev:lan": "vite --host"
+    "dev:lan": "vite --host",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.2.1",
-    "vue": "^3.5.13",
-    "image-size": "^1.1.1",
-    "vite": "^5.4.0",
-    "@babel/core": "^7.18.0",
-    "@babel/eslint-parser": "^7.17.0",
-    "@babel/plugin-syntax-class-properties": "^7.12.13",
-    "@babel/plugin-transform-nullish-coalescing-operator": "^7.22.11",
-    "@babel/plugin-transform-optional-chaining": "^7.22.10",
-    "@rollup/plugin-babel": "^6.0.3",
+    "@vue/test-utils": "^2.4.6",
     "chokidar-cli": "^3.0.0",
     "concurrently": "^6.0.2",
     "copyfiles": "^2.4.1",
     "eslint": "^8.16.0",
     "eslint-config-airbnb-base": "^15.0.0",
     "eslint-plugin-import": "^2.26.0",
-    "rollup": "^2.46.0",
-    "rollup-plugin-copy": "^3.4.0",
-    "rollup-plugin-terser": "^7.0.2",
-    "typescript": "^4.7.3"
+    "happy-dom": "^20.7.0",
+    "image-size": "^1.1.1",
+    "typescript": "^4.7.3",
+    "vite": "^5.4.0",
+    "vitest": "^4.0.18",
+    "vue": "^3.5.13"
   },
   "repository": {
     "type": "git",
@@ -87,5 +81,6 @@
     "zoom"
   ],
   "author": "cmtheit (fork from Dmytro Semenov (https://dimsemenov.com))",
+  "description": "Vue 3 reactive component for PhotoSwipe-style lightbox: data-driven slides, touch gestures, zoom, and open/close animations. TypeScript-friendly.",
   "license": "MIT"
 }

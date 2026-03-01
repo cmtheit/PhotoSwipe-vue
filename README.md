@@ -1,59 +1,238 @@
-**FEEDBACK NEEDED** I am developing the new version - PhotoSwipe v6, please [read about upcoming changes and leave feedback](https://github.com/dimsemenov/PhotoSwipe/discussions/2170).
+# PhotoSwipe Reactive (Vue 3)
 
+Vue 3 reactive component for PhotoSwipe-style lightbox: **data-driven slides**, touch gestures, zoom, and open/close animations. TypeScript-friendly.
 
-
-PhotoSwipe v5 — JavaScript image gallery and lightbox
-
-**[Demo](https://photoswipe.com)** | **[Documentation](https://photoswipe.com/getting-started/)**
-
-[![Sponsor via OpenCollective](https://img.shields.io/opencollective/all/photoswipe?label=Sponsor%20via%20OpenCollective)](https://opencollective.com/photoswipe)
-[![Follow on Twitter](https://img.shields.io/twitter/follow/photoswipe?style=social)](https://twitter.com/intent/user?screen_name=photoswipe)
-
-
-### Repo structure
-
-- `src/` - 源码 JS 与 CSS
-  - `src/js/photoswipe.js` - PhotoSwipe Core 入口
-  - `src/js/lightbox/lightbox.js` - PhotoSwipe Lightbox 入口
-- `docs/` - 文档（含架构与响应式 API 说明）
-- `demo/` - Vue 3 示例（Vite），用于本地测试图库与响应式数据源
-- `images/` - 本地开发时放置图片的目录（支持子目录，格式：jpg / png / gif / webp / avif / svg）
-- `vite.config.js` - Vite 配置（Vue 插件、图片 API 中间件、局域网 host）
-- `index.html` - 示例入口页
-
-### 本地开发与 Vue 示例
-
-本项目使用 **Vite + Vue 3** 做本地开发与示例，通过一个 HTML 页面测试 PhotoSwipe 与动态图源。
-
-1. **安装依赖**（在仓库根目录）  
-   `npm install` 或 `bun install`
-
-2. **准备图片**  
-   将图片放入根目录下的 `images/` 文件夹（可建子目录）。开发服务器会扫描该目录并对外提供接口与静态访问。
-
-3. **启动开发服务器**  
-   - `npm run dev` — 启动 Vite，默认 `http://localhost:5173`
-   - `npm run dev:lan` — 使用 `--host`，可在局域网内用本机 IP 访问（例如手机测试）
-
-4. **图片接口（开发时由 Vite 中间件提供）**  
-   - `GET /api/images` — 返回全部图片列表，每项为 `{ id, src, width, height }`（宽高由服务端读取）
-   - `GET /api/images/random?count=N&exclude=id1,id2,...` — 随机返回 N 张未在 `exclude` 中的图片，同样带 `width`/`height`
-
-5. **示例页功能**  
-   - 首屏随机展示约 20 张图片  
-   - 点击缩略图用 PhotoSwipe 打开大图  
-   - 「自动加载更多」：按可配置间隔（默认 5 秒）与每次张数，从接口随机拉取尚未显示的图片并追加到图库
-
-### 构建（可选）
-
-若要构建 JS 和 CSS 到 `dist/` 目录，在仓库根目录执行 `npm run build`（依赖现有 rollup 等配置）。
-
-### Older versions
-
-Documentation for the old version (v4) can be found [here](https://photoswipe.com/v4-docs/getting-started.html) and [the code for 4.1.3 is here](https://github.com/dimsemenov/PhotoSwipe/tree/v4.1.3).
-
-[![Stand With Ukraine](https://raw.githubusercontent.com/vshymanskyy/StandWithUkraine/main/banner-direct.svg)](https://savelife.in.ua/en/)
+**Forked from [PhotoSwipe](https://github.com/dimsemenov/PhotoSwipe) v5.4.4.** This package keeps the original Core and Lightbox scripts under `src/js/` and adds a **Vue 3 component** (`src/vue/`) that uses the same DOM/CSS and a reactive, props-down / events-up API.
 
 ---
 
-This project is tested with [BrowserStack](https://www.browserstack.com/).
+## Install
+
+In your Vue 3 project:
+
+```bash
+npm install photoswipe-vue
+# or
+bun add photoswipe-vue
+```
+
+If you use this package from a monorepo or local path:
+
+```bash
+npm install <path-to-photoswipe-reactive>
+# e.g. npm install ../packages/photoswipe-reactive
+```
+
+Peer dependency: **Vue 3**. The package exposes the Vue component and source; your bundler (Vite, Vue CLI, etc.) will compile it.
+
+---
+
+## Example
+
+**1. Minimal: single image, open/close**
+
+```vue
+<template>
+  <button @click="open = true">Open</button>
+  <PhotoSwipe
+    v-model:open="open"
+    :data-source="items"
+    :index="0"
+    @close="open = false"
+  />
+</template>
+
+<script setup>
+import { ref } from 'vue';
+import { PhotoSwipe } from 'photoswipe-vue/vue';
+import 'photoswipe-vue/photoswipe.css';
+
+const open = ref(false);
+const items = ref([
+  { src: '/path/to/image.jpg', width: 1920, height: 1080 },
+]);
+</script>
+```
+
+**2. Gallery: thumbnails + open at clicked index**
+
+```vue
+<template>
+  <div class="gallery">
+    <a
+      v-for="(item, index) in items"
+      :key="item.src"
+      href="#"
+      @click.prevent="openAt(index)"
+    >
+      <img :src="item.src" :alt="item.alt" loading="lazy" />
+    </a>
+  </div>
+  <PhotoSwipe
+    v-model:open="pswpOpen"
+    v-model:index="pswpIndex"
+    :data-source="items"
+    :loop="true"
+    :show-close="true"
+    :show-counter="true"
+    @change="onChange"
+    @close="pswpOpen = false"
+  />
+</template>
+
+<script setup>
+import { ref } from 'vue';
+import { PhotoSwipe } from 'photoswipe-vue/vue';
+import 'photoswipe-vue/photoswipe.css';
+
+const items = ref([
+  { src: '/img/1.jpg', width: 1200, height: 800, alt: 'Photo 1' },
+  { src: '/img/2.jpg', width: 800, height: 1200, alt: 'Photo 2' },
+]);
+
+const pswpOpen = ref(false);
+const pswpIndex = ref(0);
+
+function openAt(index) {
+  pswpIndex.value = index;
+  pswpOpen.value = true;
+}
+
+function onChange({ index }) {
+  pswpIndex.value = index;
+}
+</script>
+
+<style scoped>
+.gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; }
+.gallery img { width: 100%; height: 100px; object-fit: cover; }
+</style>
+```
+
+**3. Open programmatically via ref**
+
+```vue
+<template>
+  <button @click="lightboxRef?.open(2)">Open third image</button>
+  <PhotoSwipe ref="lightboxRef" :data-source="items" />
+</template>
+
+<script setup>
+import { ref } from 'vue';
+import { PhotoSwipe } from 'photoswipe-vue/vue';
+import 'photoswipe-vue/photoswipe.css';
+
+const lightboxRef = ref(null);
+const items = ref([/* SlideData[] */]);
+</script>
+```
+
+Slide data shape: `{ src, width, height, alt? }`. Optional `element` (thumb DOM node) for open/close position animation only; **no thumbnail image (msrc) or built-in placeholder** in the current version. See `src/vue/types.ts` for full `SlideData`.
+
+---
+
+## Repo structure
+
+| Path | Description |
+|------|-------------|
+| `src/js/` | Original PhotoSwipe 5.x Core and Lightbox (unchanged) |
+| `src/vue/` | Vue 3 component: `PhotoSwipe.vue`, composables, slide logic |
+| `src/photoswipe.css` | Shared styles (unchanged from upstream) |
+| `docs/` | Architecture and API notes (including Vue v2 plan) |
+| `demo/` | Vue 3 + Vite demo app for local testing |
+
+---
+
+## Original (PhotoSwipe 5.4.4) vs this version
+
+| Aspect | Original 5.4.4 | This package |
+|--------|-----------------|--------------|
+| **Usage** | Imperative JS: `new PhotoSwipe()`, options, DOM gallery or `items[]` | Declarative Vue: `<PhotoSwipe v-model:open :data-source="items" />` |
+| **Data source** | DOM gallery (`gallery` / `children` / selectors) or `items[]` | **Data only**: `SlideData[]` via `dataSource` prop. No DOM gallery parsing. |
+| **State** | Single `core` object with many fields | Component state + props down / events up |
+| **UI / slide logic** | Tightly coupled via `core` | Decoupled: `PswpUI` and `PswpSlideView` communicate via props and emits |
+| **Desktop features** | Keyboard, scroll wheel, ESC, arrows, focus trap, etc. | **Not implemented**; focused on touch and pointer gestures |
+| **Thumbnails** | Optional msrc, placeholder in slide | **Not implemented**: no `msrc`, no built-in thumbnail/placeholder in the viewer; optional `SlideData.element` (thumb DOM node) only for open/close position animation |
+| **CSS / DOM** | Same `.pswp` structure and classes | **Unchanged**; reuse `photoswipe.css` and same DOM shape |
+
+So: same look and touch behavior, reactive API, data-only slides, no gallery mode, no desktop-only features.
+
+### Vue 版 UI 与交互说明
+
+- **无左右箭头、无放大镜按钮**：Vue 组件不提供顶部/侧边的上一张/下一张箭头按钮，也不提供放大镜（缩放）按钮；切换幻灯片仅支持左右滑动手势，缩放仅支持双指捏合等手势。
+- **系统返回关闭遮罩**：在手机或浏览器中，打开遮罩时会 push 一条 history 记录，用户按**系统返回键**（Android 返回键）或**浏览器后退**时，会关闭遮罩而不离开当前页。
+
+---
+
+## Package outputs (build)
+
+The library provides:
+
+- **One JS entry for Vue**: `src/vue/index.ts` (or built `dist/vue.mjs` after `npm run build`)
+- **One CSS file**: `src/photoswipe.css` (copied to `dist/photoswipe.css` on build)
+
+**Exports:**
+
+- `photoswipe-vue` → original Core (`src/js/photoswipe.js`)
+- `photoswipe-vue/lightbox` → Lightbox (`src/js/lightbox/lightbox.js`)
+- `photoswipe-vue/vue` → Vue component and types (`PhotoSwipe.vue` + `types`)
+- `photoswipe-vue/photoswipe.css` or `photoswipe-vue/style.css` → `src/photoswipe.css`
+
+---
+
+## Build scripts
+
+```bash
+# Build Vue bundle (dist/vue.mjs) and copy CSS (dist/photoswipe.css)
+npm run build
+
+# Only copy CSS to dist/
+npm run build:css
+
+# Only build Vue lib to dist/vue.mjs
+npm run build:vue
+```
+
+No Rollup/Uglify step for the original `src/js/`; that code is left as-is. Build focuses on one Vue bundle and one CSS file.
+
+---
+
+## Development and testing
+
+### Install
+
+```bash
+npm install
+# or
+bun install
+```
+
+### Dev server (demo app)
+
+```bash
+npm run dev
+```
+
+- Dev server: `http://localhost:5173`
+- Put images in `images/` (e.g. jpg, png, webp). The demo uses:
+  - `GET /api/images` — list all images
+  - `GET /api/images/random?count=N` — random images for “load more”
+
+```bash
+npm run dev:lan
+```
+
+- Same as above with `--host` for LAN access (e.g. mobile).
+
+### Tests
+
+```bash
+npm run test        # run once
+npm run test:watch  # watch mode
+```
+
+---
+
+## License
+
+MIT. Forked from PhotoSwipe v5.4.4 by Dmytro Semenov ([dimsemenov.com](https://dimsemenov.com)).
