@@ -74,8 +74,6 @@ const items = ref([
     :data-source="items"
     :loop="true"
     :show-close="true"
-    :show-arrow-prev="true"
-    :show-arrow-next="true"
     :show-counter="true"
     @change="onChange"
     @close="pswpOpen = false"
@@ -130,6 +128,63 @@ const items = ref([/* SlideData[] */]);
 ```
 
 幻灯片数据格式：`{ src, width, height, alt? }`。可选 `element`（缩略图 DOM）仅用于开关位置动画；**当前版本无缩略图图片（msrc）及内置占位图**。完整 `SlideData` 见 `src/vue/types.ts`。
+
+---
+
+## API（Props、Events、Expose）
+
+完整类型见 `src/vue/types.ts`（`PhotoSwipeProps`、`PhotoSwipeEmits`、`PhotoSwipeExpose`）。
+
+### Props
+
+| 属性 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `dataSource` | `SlideData[]` | `[]` | 幻灯片数据（src、width、height、alt?，element? 仅用于动画）。 |
+| `index` | `number` | `0` | 当前幻灯片索引（从 0 开始）。可用 `v-model:index` 同步。 |
+| `open` | `boolean` | `false` | 是否打开灯箱。可用 `v-model:open` 同步。 |
+| `loop` | `boolean` | `true` | 是否循环滑动（滑过首/末张后循环）。 |
+| `allowPanToNext` | `boolean` | `true` | 是否允许滑动到上一张/下一张。 |
+| `pinchToClose` | `boolean` | `true` | 是否支持双指捏合关闭。 |
+| `closeOnVerticalDrag` | `boolean` | `true` | 是否支持垂直拖动关闭。 |
+| `clickToCloseNonZoomable` | `boolean` | `true` | 未放大时点击是否关闭。 |
+| `spacing` | `number` | `0.1` | 幻灯片间距比例（0–1）。 |
+| `easing` | `string` | `'cubic-bezier(.4,0,.22,1)'` | 过渡缓动函数。 |
+| `zoomAnimationDuration` | `number \| false` | `333` | 缩放动画时长（ms）；`false` 关闭动画。 |
+| `preload` | `[number, number]` | `[1, 2]` | 当前张前后预加载张数。 |
+| `bgOpacity` | `number` | `0.8` | 背景遮罩不透明度（0–1）。 |
+| `showAnimationDuration` | `number \| false` | `333` | 打开动画时长（ms）。 |
+| `hideAnimationDuration` | `number \| false` | `333` | 关闭动画时长（ms）。 |
+| `showClose` | `boolean` | `true` | 是否显示关闭按钮。 |
+| `showCounter` | `boolean` | `true` | 是否显示计数（如 1/5）。 |
+| `indexIndicatorSep` | `string` | `' / '` | 计数分隔符。 |
+| `closeTitle` | `string` | — | 关闭按钮的 `title` 与 `aria-label`。 |
+| `showUiAtFirst` | `boolean` | `false` | 打开时是否先展示控件栏；为 false 时需点击图片切换。 |
+| `closeOnBack` | `boolean` | `false` | 是否用 history（pushState/popstate）实现返回键/后退关闭。 |
+| `appendTo` | `string \| HTMLElement` | `'body'` | 挂载目标（选择器或元素）。 |
+| `zIndex` | `number` | — | 根节点 z-index；不传则使用 CSS 变量 `--pswp-root-z-index`（100000）。 |
+| `onVerticalDrag` | `function` | — | 垂直拖动时回调；payload 含 `panY` 与 `preventDefault()`。 |
+| `onBeforeClose` | `function` | — | 关闭前钩子；返回 `false` 可阻止关闭。 |
+
+### Events
+
+| 事件 | 载荷 | 说明 |
+|------|------|------|
+| `update:open` | `value: boolean` | v-model:open。 |
+| `update:index` | `value: number` | v-model:index。 |
+| `beforeOpen` | — | open 变为 true 时。 |
+| `afterInit` | — | 初始化与打开动画就绪后。 |
+| `change` | `{ index: number }` | 当前索引变化时。 |
+| `close` | — | 灯箱关闭时。 |
+| `destroy` | — | 关闭动画结束、组件即将卸载时。 |
+| `verticalDrag` | `{ panY: number }` | 垂直拖动过程中（如下拉关闭）。 |
+| `uiVisibleChange` | `{ visible: boolean }` | 控件栏显示/隐藏切换时（如点击图片切换）。 |
+
+### Expose（ref）
+
+| 方法 | 签名 | 说明 |
+|------|------|------|
+| `open` | `open(index?: number)` | 打开灯箱；可传索引指定显示哪一张。 |
+| `toggleUI` | `toggleUI()` | 切换控件栏（关闭按钮、计数）的显示/隐藏。 |
 
 ---
 

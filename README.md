@@ -131,6 +131,63 @@ Slide data shape: `{ src, width, height, alt? }`. Optional `element` (thumb DOM 
 
 ---
 
+## API (Props, Events, Expose)
+
+Full types: `src/vue/types.ts` (`PhotoSwipeProps`, `PhotoSwipeEmits`, `PhotoSwipeExpose`).
+
+### Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `dataSource` | `SlideData[]` | `[]` | Slide items (src, width, height, alt?, element? for animation). |
+| `index` | `number` | `0` | Current slide index (0-based). Use `v-model:index` to sync. |
+| `open` | `boolean` | `false` | Whether the lightbox is open. Use `v-model:open` to sync. |
+| `loop` | `boolean` | `true` | Whether to loop when swiping past first/last slide. |
+| `allowPanToNext` | `boolean` | `true` | Allow swipe to previous/next slide. |
+| `pinchToClose` | `boolean` | `true` | Allow pinch gesture to close. |
+| `closeOnVerticalDrag` | `boolean` | `true` | Allow vertical drag to close. |
+| `clickToCloseNonZoomable` | `boolean` | `true` | Click to close when not zoomed. |
+| `spacing` | `number` | `0.1` | Spacing ratio between slides (0–1). |
+| `easing` | `string` | `'cubic-bezier(.4,0,.22,1)'` | Transition easing. |
+| `zoomAnimationDuration` | `number \| false` | `333` | Zoom animation duration (ms); `false` to disable. |
+| `preload` | `[number, number]` | `[1, 2]` | Number of slides to preload before/after current. |
+| `bgOpacity` | `number` | `0.8` | Background overlay opacity (0–1). |
+| `showAnimationDuration` | `number \| false` | `333` | Open animation duration (ms). |
+| `hideAnimationDuration` | `number \| false` | `333` | Close animation duration (ms). |
+| `showClose` | `boolean` | `true` | Show close button. |
+| `showCounter` | `boolean` | `true` | Show counter (e.g. 1/5). |
+| `indexIndicatorSep` | `string` | `' / '` | Counter separator. |
+| `closeTitle` | `string` | — | Close button `title` and `aria-label`. |
+| `showUiAtFirst` | `boolean` | `false` | Show UI (close, counter) on open; if false, tap image to toggle. |
+| `closeOnBack` | `boolean` | `false` | Use history (pushState/popstate) so back button closes lightbox. |
+| `appendTo` | `string \| HTMLElement` | `'body'` | Teleport target (selector or element). |
+| `zIndex` | `number` | — | Root z-index; if not set, uses CSS var `--pswp-root-z-index` (100000). |
+| `onVerticalDrag` | `function` | — | Called on vertical drag; payload has `panY` and `preventDefault()`. |
+| `onBeforeClose` | `function` | — | Before close; return `false` to prevent closing. |
+
+### Events
+
+| Event | Payload | Description |
+|-------|---------|-------------|
+| `update:open` | `value: boolean` | v-model:open. |
+| `update:index` | `value: number` | v-model:index. |
+| `beforeOpen` | — | When `open` becomes true. |
+| `afterInit` | — | After init and open animation ready. |
+| `change` | `{ index: number }` | When current index changes. |
+| `close` | — | When lightbox closes. |
+| `destroy` | — | When close animation ends and component unmounts. |
+| `verticalDrag` | `{ panY: number }` | During vertical drag (e.g. pull to close). |
+| `uiVisibleChange` | `{ visible: boolean }` | When UI bar visibility toggles (e.g. tap to show/hide). |
+
+### Expose (ref)
+
+| Method | Signature | Description |
+|--------|-----------|-------------|
+| `open` | `open(index?: number)` | Open lightbox; optional index to show that slide. |
+| `toggleUI` | `toggleUI()` | Toggle UI bar (close button, counter) visibility. |
+
+---
+
 ## Repo structure
 
 | Path | Description |

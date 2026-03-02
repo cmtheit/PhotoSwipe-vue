@@ -27,6 +27,7 @@
         <path d="M24 10l-2-2-6 6-6-6-2 2 6 6-6 6 2 2 6-6 6 6 2-2-6-6z" id="pswp__icn-close" />
       </svg>
     </button>
+    <slot />
   </div>
 </template>
 

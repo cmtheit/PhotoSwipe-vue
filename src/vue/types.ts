@@ -126,45 +126,84 @@ export interface UIEmits {
 // ─── §1.4 PhotoSwipe.vue ───
 
 export interface PhotoSwipeProps {
+  /** 幻灯片数据源，默认 [] */
   dataSource?: SlideData[];
+  /** 当前显示的幻灯片索引（从 0 开始），支持 v-model:index，默认 0 */
   index?: number;
+  /** 是否打开预览，支持 v-model:open，默认 false */
   open?: boolean;
+  /** 是否循环滑动，默认 true */
   loop?: boolean;
+  /** 是否允许滑动到下一张/上一张，默认 true */
   allowPanToNext?: boolean;
+  /** 是否支持双指捏合关闭，默认 true */
   pinchToClose?: boolean;
+  /** 是否支持垂直拖动关闭，默认 true */
   closeOnVerticalDrag?: boolean;
+  /** 未放大时点击是否关闭，默认 true */
   clickToCloseNonZoomable?: boolean;
+  /** 幻灯片之间的间距比例（0–1），默认 0.1 */
   spacing?: number;
+  /** 过渡缓动函数，默认 'cubic-bezier(.4,0,.22,1)' */
   easing?: string;
+  /** 缩放动画时长（ms），false 关闭动画，默认 333 */
   zoomAnimationDuration?: number | false;
+  /** 预加载前后张数 [前, 后]，默认 [1, 2] */
   preload?: [number, number];
+  /** 背景遮罩不透明度（0–1），默认 0.8 */
   bgOpacity?: number;
+  /** 打开动画时长（ms），默认 333 */
   showAnimationDuration?: number | false;
+  /** 关闭动画时长（ms），默认 333 */
   hideAnimationDuration?: number | false;
+  /** 是否显示关闭按钮，默认 true */
   showClose?: boolean;
+  /** 是否显示计数（如 1/5），默认 true */
   showCounter?: boolean;
+  /** 计数分隔符，默认 ' / ' */
   indexIndicatorSep?: string;
+  /** 关闭按钮的 title 与 aria-label */
   closeTitle?: string;
-  /** 是否用 history（pushState + popstate）实现「返回键/浏览器后退」关闭，默认 true */
+  /** 是否在打开时先展示控件栏；为 false 时需点击图片切换出控件，默认 false */
+  showUiAtFirst?: boolean;
+  /** 是否用 history（pushState + popstate）实现返回键/浏览器后退关闭，默认 false */
   closeOnBack?: boolean;
+  /** 挂载目标：CSS 选择器字符串或 HTMLElement，默认 'body' */
   appendTo?: string | HTMLElement;
+  /** 根节点 z-index，未传时使用 CSS 变量 --pswp-root-z-index（默认 100000） */
+  zIndex?: number;
+  /** 垂直拖动时回调，可调用 preventDefault 阻止默认关闭 */
   onVerticalDrag?: (payload: { panY: number; preventDefault: () => void }) => void;
+  /** 关闭前钩子，返回 false 可阻止关闭 */
   onBeforeClose?: (source?: string) => boolean | void;
 }
 
 export interface PhotoSwipeEmits {
+  /** v-model:open 更新 */
   'update:open': [value: boolean];
+  /** v-model:index 更新 */
   'update:index': [value: number];
+  /** 打开前触发（open 变为 true 时） */
   beforeOpen: [];
+  /** 初始化与打开动画就绪后触发 */
   afterInit: [];
+  /** 当前索引变化时触发 */
   change: [payload: { index: number }];
+  /** 关闭时触发 */
   close: [];
+  /** 关闭动画结束、组件即将卸载时触发 */
   destroy: [];
+  /** 垂直拖动时触发（如下拉关闭） */
   verticalDrag: [payload: { panY: number }];
+  /** 控件栏显示/隐藏切换时触发（如点击图片切换顶部栏），便于安卓单图时联动显示 ActionSheet */
+  uiVisibleChange: [payload: { visible: boolean }];
 }
 
 export interface PhotoSwipeExpose {
+  /** 打开预览，可传索引跳转到指定张 */
   open(index?: number): void;
+  /** 切换控件栏显示/隐藏 */
+  toggleUI(): void;
 }
 
 // ─── 内部用（Slide / Content / Eventable）────

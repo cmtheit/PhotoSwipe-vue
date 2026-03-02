@@ -5,6 +5,7 @@
       ref="rootRef"
       class="pswp"
       :class="rootClasses"
+      :style="rootStyle"
       tabindex="-1"
       role="dialog"
     >
@@ -40,8 +41,11 @@
           :index-indicator-sep="indexIndicatorSep"
           :close-title="closeTitle"
           @close="handleClose"
-        />
+        >
+          <slot />
+        </PswpUI>
       </section>
+      <slot name="overlay" />
     </div>
   </Teleport>
 </template>
@@ -49,6 +53,8 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick, onBeforeUnmount } from 'vue';
 import type { PhotoSwipeProps, PhotoSwipeEmits, PhotoSwipeExpose, SlideData } from './types';
+
+defineOptions({ inheritAttrs: false });
 import { getViewportSize } from './utils/viewport';
 import { getThumbBounds } from './utils/thumb-bounds';
 import { Animations } from './core/animations';
@@ -75,8 +81,10 @@ const props = withDefaults(defineProps<PhotoSwipeProps>(), {
   showClose: true,
   showCounter: true,
   indexIndicatorSep: ' / ',
+  showUiAtFirst: false,
   closeOnBack: false,
   appendTo: () => 'body',
+  zIndex: 100000,
 });
 
 const emit = defineEmits<PhotoSwipeEmits>();
@@ -98,6 +106,7 @@ const animations = new Animations();
 
 function onToggleUI() {
   uiVisible.value = !uiVisible.value;
+  emit('uiVisibleChange', { visible: uiVisible.value });
 }
 
 const dataSource = computed<SlideData[]>(() => props.dataSource ?? []);
@@ -197,13 +206,13 @@ const openerCtx = {
     }
   },
   onOpeningAnimationStart() {
-    uiVisible.value = true;
+    uiVisible.value = !!props.showUiAtFirst;
     slideViewRef.value?.setOpenerOpen?.(true);
     slideViewRef.value?.appendHeavy?.();
   },
   onOpeningAnimationEnd() {
     openerIsOpen.value = true;  // 仍保留 for Vue rendering
-    uiVisible.value = true;
+    uiVisible.value = !!props.showUiAtFirst;
     slideViewRef.value?.completeOpen?.();  // 替代原来的 handleResize + appendHeavy
   },
   onClosingAnimationEnd() {
@@ -226,6 +235,10 @@ const rootClasses = computed(() => ({
   'pswp--one-slide': totalItems.value <= 1,
   'pswp--has_mouse': true,
 }));
+
+const rootStyle = computed(() =>
+  props.zIndex != null ? { zIndex: props.zIndex } : undefined
+);
 
 
 const appendToTarget = computed(() => {
@@ -341,7 +354,12 @@ function open(index?: number) {
   emit('update:open', true);
 }
 
+function toggleUI() {
+  onToggleUI();
+}
+
 defineExpose<PhotoSwipeExpose>({
   open,
+  toggleUI,
 });
 </script>
