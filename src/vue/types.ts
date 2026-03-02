@@ -72,11 +72,12 @@ export interface SlideViewProps {
   zoomAnimationDuration?: number | false;
   preload?: [number, number];
   opened?: boolean;
+  onVerticalDrag?: (payload: { panY: number; preventDefault: () => void }) => void;
 }
 
 export interface SlideViewEmits {
   'update:currentIndex': [index: number];
-  requestClose: [];
+  requestClose: [source?: string];
   toggleUI: [];
   zoomStateChange: [state: ZoomState];
   bgOpacityChange: [opacity: number];
@@ -144,7 +145,11 @@ export interface PhotoSwipeProps {
   showCounter?: boolean;
   indexIndicatorSep?: string;
   closeTitle?: string;
+  /** 是否用 history（pushState + popstate）实现「返回键/浏览器后退」关闭，默认 true */
+  closeOnBack?: boolean;
   appendTo?: string | HTMLElement;
+  onVerticalDrag?: (payload: { panY: number; preventDefault: () => void }) => void;
+  onBeforeClose?: (source?: string) => boolean | void;
 }
 
 export interface PhotoSwipeEmits {
@@ -155,6 +160,7 @@ export interface PhotoSwipeEmits {
   change: [payload: { index: number }];
   close: [];
   destroy: [];
+  verticalDrag: [payload: { panY: number }];
 }
 
 export interface PhotoSwipeExpose {

@@ -341,7 +341,7 @@ export function useSlideView(
     dispatch: eventable.dispatch.bind(eventable),
     applyFilters: eventable.applyFilters.bind(eventable),
     emitIndexChange: (i: number) => emit('update:currentIndex', i),
-    emitRequestClose: () => emit('requestClose'),
+    emitRequestClose: (source?: string) => emit('requestClose', source),
     emitZoomStateChange: (s: ZoomState) => emit('zoomStateChange', s),
     get opener() {
       return { isOpen: _openerIsOpen };
@@ -416,7 +416,7 @@ export function useSlideView(
     applyBgOpacity,
     getViewportSize: () => viewportSize,
     getOpenerIsOpen: () => _openerIsOpen,
-    emitRequestClose: () => emit('requestClose'),
+    emitRequestClose: (source?: string) => emit('requestClose', source),
     toggleUI: () => emit('toggleUI'),
     events,
   };
@@ -462,6 +462,21 @@ export function useSlideView(
 
     resizeHandler = () => updateSize(true);
     window.addEventListener('resize', resizeHandler);
+    
+    // 转发 verticalDrag 事件到外部回调
+    if (props.onVerticalDrag) {
+      eventable.on('verticalDrag', (e: any) => {
+        let prevented = false;
+        props.onVerticalDrag!({
+          panY: e.panY,
+          preventDefault: () => { prevented = true; },
+        });
+        if (prevented && e.preventDefault) {
+          e.preventDefault();
+        }
+      });
+    }
+    
     eventable.dispatch('bindEvents');
     gesturesBind?.bindEvents();
 

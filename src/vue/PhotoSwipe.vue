@@ -24,6 +24,7 @@
           :zoom-animation-duration="zoomAnimationDuration"
           :preload="preload"
           :opened="openerIsOpen"
+          :on-vertical-drag="handleVerticalDrag"
           @update:current-index="onSlideIndexChange"
           @request-close="onRequestClose"
           @toggleUI="onToggleUI"
@@ -74,6 +75,7 @@ const props = withDefaults(defineProps<PhotoSwipeProps>(), {
   showClose: true,
   showCounter: true,
   indexIndicatorSep: ' / ',
+  closeOnBack: false,
   appendTo: () => 'body',
 });
 
@@ -244,7 +246,7 @@ watch(
   () => props.open,
   (open) => {
     if (open) {
-      if (typeof history !== 'undefined' && history.pushState) {
+      if (props.closeOnBack !== false && typeof history !== 'undefined' && history.pushState) {
         history.pushState({ photoswipe: true }, '');
         if (!popstateUnsubscribe) {
           const handler = () => {
@@ -302,8 +304,21 @@ function onSlideIndexChange(index: number) {
   emit('change', { index });
 }
 
-function onRequestClose() {
+function onRequestClose(source?: string) {
+  if (props.onBeforeClose) {
+    const result = props.onBeforeClose(source);
+    if (result === false) {
+      return; // 拦截关闭
+    }
+  }
   handleClose();
+}
+
+function handleVerticalDrag(payload: { panY: number; preventDefault: () => void }) {
+  emit('verticalDrag', { panY: payload.panY });
+  if (props.onVerticalDrag) {
+    props.onVerticalDrag(payload);
+  }
 }
 
 function onBgOpacityChange(opacity: number) {

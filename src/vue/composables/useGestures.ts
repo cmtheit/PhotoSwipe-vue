@@ -44,7 +44,7 @@ export interface GesturesHost {
   applyBgOpacity(opacity: number): void;
   getViewportSize(): Point;
   getOpenerIsOpen(): boolean;
-  emitRequestClose(): void;
+  emitRequestClose(source?: string): void;
   /** 点击/轻触时若 action 为 toggle-controls 则调用，用于切换 UI 显示 */
   toggleUI?(): void;
   emitZoomStateChange?(state: ZoomState): void;
@@ -214,7 +214,7 @@ export function useGestures(host: GesturesHost): { bindEvents(): void; unbind():
       const vDragRatio = getVerticalDragRatio(panPos);
       const projectedVDragRatio = getVerticalDragRatio(projectedPosition);
       if ((vDragRatio < 0 && projectedVDragRatio < -MIN_RATIO_TO_CLOSE) || (vDragRatio > 0 && projectedVDragRatio > MIN_RATIO_TO_CLOSE)) {
-        host.emitRequestClose();
+        host.emitRequestClose('verticalDrag');
         return;
       }
     }
@@ -358,7 +358,7 @@ export function useGestures(host: GesturesHost): { bindEvents(): void; unbind():
     const curr = host.getCurrSlide();
     const opts = host.getOptions();
     if ((!curr || curr.currZoomLevel < curr.zoomLevels.initial) && !_wasOverFitZoomLevel && opts.pinchToClose) {
-      host.emitRequestClose();
+      host.emitRequestClose('pinch');
     } else {
       zoomCorrectZoomPan();
     }
@@ -378,7 +378,7 @@ export function useGestures(host: GesturesHost): { bindEvents(): void; unbind():
     switch (optionValue) {
       case 'close':
       case 'next':
-        if (optionValue === 'close') host.emitRequestClose();
+        if (optionValue === 'close') host.emitRequestClose('tap');
         else host.mainScroll.moveIndexBy(1, true);
         break;
       case 'zoom':
@@ -386,7 +386,7 @@ export function useGestures(host: GesturesHost): { bindEvents(): void; unbind():
         break;
       case 'zoom-or-close':
         if (curr?.isZoomable() && curr.zoomLevels.secondary !== curr.zoomLevels.initial) curr.toggleZoom(point);
-        else if (opts.clickToCloseNonZoomable) host.emitRequestClose();
+        else if (opts.clickToCloseNonZoomable) host.emitRequestClose('tap');
         break;
       case 'toggle-controls':
         host.toggleUI?.();
