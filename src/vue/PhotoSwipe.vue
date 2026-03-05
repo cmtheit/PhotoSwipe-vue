@@ -358,8 +358,16 @@ function toggleUI() {
   onToggleUI();
 }
 
+function setUiVisible(visible: boolean) {
+  if (uiVisible.value !== visible) {
+    uiVisible.value = visible;
+    emit('uiVisibleChange', { visible: uiVisible.value });
+  }
+}
+
 defineExpose<PhotoSwipeExpose>({
   open,
   toggleUI,
+  setUiVisible,
 });
 </script>

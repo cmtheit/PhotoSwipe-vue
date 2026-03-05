@@ -204,6 +204,8 @@ export interface PhotoSwipeExpose {
   open(index?: number): void;
   /** 切换控件栏显示/隐藏 */
   toggleUI(): void;
+  /** 设置控件栏显示/隐藏状态 */
+  setUiVisible(visible: boolean): void;
 }
 
 // ─── 内部用（Slide / Content / Eventable）────
