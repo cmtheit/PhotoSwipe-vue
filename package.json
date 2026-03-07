@@ -1,6 +1,6 @@
 {
   "name": "photoswipe-vue",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "main": "src/js/photoswipe.js",
   "style": "src/photoswipe.css",
   "type": "module",

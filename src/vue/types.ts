@@ -29,6 +29,8 @@ export interface SlideData {
   type?: 'image' | 'html' | string;
   /** 缩略图元素，仅用于打开/关闭过渡动画的位置计算 */
   element?: HTMLElement;
+  /** 幻灯片 ID，用于删除时的追踪定位 */
+  id?: string;
   [key: string]: any;
 }
 
@@ -188,7 +190,7 @@ export interface PhotoSwipeEmits {
   /** 初始化与打开动画就绪后触发 */
   afterInit: [];
   /** 当前索引变化时触发 */
-  change: [payload: { index: number }];
+  change: [payload: { index: number; reason?: string }];
   /** 关闭时触发 */
   close: [];
   /** 关闭动画结束、组件即将卸载时触发 */
