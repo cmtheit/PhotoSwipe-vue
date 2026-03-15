@@ -23,6 +23,9 @@ export function useOpener(ctx: OpenerCtx): OpenerAPI {
   let _cropContainer1: HTMLDivElement | undefined = undefined;
   let _cropContainer2: HTMLDivElement | null | undefined = undefined;
   let _thumbBounds: Bounds | undefined = undefined;
+  /** 打开时延迟 _initiate 的 timer，用于在 close 中途取消时清除，避免后续再次触发 _initiate */
+  let _openTimer1: ReturnType<typeof setTimeout> | undefined = undefined;
+  let _openTimer2: ReturnType<typeof setTimeout> | undefined = undefined;
 
   function _applyStartProps(): void {
     const options = ctx.getOptions();
@@ -279,6 +282,17 @@ export function useOpener(ctx: OpenerCtx): OpenerAPI {
     }
   }
 
+  function _clearOpenTimers(): void {
+    if (_openTimer1 !== undefined) {
+      clearTimeout(_openTimer1);
+      _openTimer1 = undefined;
+    }
+    if (_openTimer2 !== undefined) {
+      clearTimeout(_openTimer2);
+      _openTimer2 = undefined;
+    }
+  }
+
   function _start(): void {
     if (
       isOpening &&
@@ -295,11 +309,15 @@ export function useOpener(ctx: OpenerCtx): OpenerAPI {
           if (!isDelaying) _initiate();
         })
         .catch(() => {});
-      setTimeout(() => {
+      _openTimer1 = setTimeout(() => {
+        _openTimer1 = undefined;
         isDelaying = false;
         if (decoded) _initiate();
       }, 50);
-      setTimeout(() => _initiate(), 250);
+      _openTimer2 = setTimeout(() => {
+        _openTimer2 = undefined;
+        _initiate();
+      }, 250);
     } else {
       _initiate();
     }
@@ -328,12 +346,20 @@ export function useOpener(ctx: OpenerCtx): OpenerAPI {
   }
 
   function close(): void {
-    if (isClosed || isClosing || isOpening) return;
+    if (isClosing) return;
+
+    // 尚未执行过 open() 就收到关闭（例如 nextTick(runInit) 前按返回）：直接收尾，避免僵尸挂载
+    if (isClosed) {
+      ctx.onClosingAnimationEnd?.();
+      return;
+    }
+
     const options = ctx.getOptions();
     const slideW = ctx.slideView.getCurrentSlideWidth();
     const maxW = (options.maxWidthToAnimate as number) ?? 4000;
     const initialZoom = ctx.slideView.getCurrentSlideInitialZoom();
 
+    const wasOpening = isOpening;
     isOpen = false;
     isOpening = false;
     isClosing = true;
@@ -342,6 +368,17 @@ export function useOpener(ctx: OpenerCtx): OpenerAPI {
         ? (options.hideAnimationDuration as number)
         : 333;
     if (slideW * initialZoom >= maxW) _duration = 0;
+
+    if (wasOpening) {
+      _clearOpenTimers();
+      ctx.animations.stopAllPan?.();
+      if ('stopAll' in ctx.animations) {
+        (ctx.animations as { stopAll(): void }).stopAll();
+      }
+      // 打开动画中途关闭：不做关闭动画，直接收尾，保证能走到 onClosingAnimationEnd
+      _duration = 0;
+      _useAnimation = false;
+    }
 
     _applyStartProps();
     setTimeout(() => _start(), _croppedZoom ? 30 : 0);

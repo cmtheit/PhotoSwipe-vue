@@ -105,6 +105,7 @@ export interface SlideViewExpose {
   resizeScroll(): void;
   appendHeavy(): void;
   setOpenerOpen(value: boolean): void;
+  stopAllAnimations(): void;
 }
 
 // ─── §1.3 PswpUI ───
@@ -206,6 +207,8 @@ export interface PhotoSwipeExpose {
   toggleUI(): void;
   /** 设置控件栏显示/隐藏状态 */
   setUiVisible(visible: boolean): void;
+  /** 恢复被拦截的 verticalDrag 关闭后的状态（停止动画 + 重置 bgOpacity） */
+  recoverFromVerticalDrag(): void;
 }
 
 // ─── 内部用（Slide / Content / Eventable）────

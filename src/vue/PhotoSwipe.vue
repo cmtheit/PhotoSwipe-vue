@@ -321,7 +321,7 @@ function onRequestClose(source?: string) {
   if (props.onBeforeClose) {
     const result = props.onBeforeClose(source);
     if (result === false) {
-      return; // 拦截关闭
+      return;
     }
   }
   handleClose();
@@ -343,7 +343,18 @@ function onBgOpacityChange(opacity: number) {
 }
 
 function handleClose() {
+  slideViewRef.value?.stopAllAnimations?.();
   opener.close();
+}
+
+function recoverFromVerticalDrag() {
+  slideViewRef.value?.stopAllAnimations?.();
+  bgOpacityRef.value = 1;
+  if (bgRef.value) {
+    bgRef.value.style.opacity = String(props.bgOpacity ?? 0.8);
+  }
+  slideViewRef.value?.zoomAndPanToInitial?.();
+  slideViewRef.value?.applyCurrentSlideTransform?.();
 }
 
 function open(index?: number) {
@@ -369,5 +380,6 @@ defineExpose<PhotoSwipeExpose>({
   open,
   toggleUI,
   setUiVisible,
+  recoverFromVerticalDrag,
 });
 </script>

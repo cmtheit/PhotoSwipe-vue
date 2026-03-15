@@ -210,35 +210,44 @@ export function useGestures(host: GesturesHost): { bindEvents(): void; unbind():
     const restoreBgOpacity = axis === 'y' && (host as { bgOpacity?: number }).bgOpacity !== undefined && (host as { bgOpacity: number }).bgOpacity < 1;
     const decelerationRate = 0.995;
     const projectedPosition = panPos + project(velocity[axis], decelerationRate);
+
+    let shouldClose = false;
     if (restoreBgOpacity) {
       const vDragRatio = getVerticalDragRatio(panPos);
       const projectedVDragRatio = getVerticalDragRatio(projectedPosition);
-      if ((vDragRatio < 0 && projectedVDragRatio < -MIN_RATIO_TO_CLOSE) || (vDragRatio > 0 && projectedVDragRatio > MIN_RATIO_TO_CLOSE)) {
-        host.emitRequestClose('verticalDrag');
-        return;
-      }
+      shouldClose = (vDragRatio < 0 && projectedVDragRatio < -MIN_RATIO_TO_CLOSE) || (vDragRatio > 0 && projectedVDragRatio > MIN_RATIO_TO_CLOSE);
     }
+
     const correctedPanPosition = curr.bounds.correctPan(axis, projectedPosition);
+
+    if (panPos !== correctedPanPosition) {
+      const dampingRatio = correctedPanPosition === projectedPosition ? 1 : 0.82;
+      const initialBgOpacity = (host as { bgOpacity?: number }).bgOpacity ?? 1;
+      const totalPanDist = correctedPanPosition - panPos;
+      host.animations.startSpring({
+        isPan: true,
+        name: 'panGesture' + axis,
+        start: panPos,
+        end: correctedPanPosition,
+        velocity: velocity[axis],
+        dampingRatio,
+        onUpdate: (pos: number) => {
+          if (restoreBgOpacity && (host as { bgOpacity?: number }).bgOpacity !== undefined && (host as { bgOpacity: number }).bgOpacity < 1) {
+            const animationProgressRatio = 1 - (correctedPanPosition - pos) / totalPanDist;
+            host.applyBgOpacity(clamp(initialBgOpacity + (1 - initialBgOpacity) * animationProgressRatio, 0, 1));
+          }
+          curr.pan[axis] = Math.floor(pos);
+          curr.applyCurrentZoomPan();
+        },
+      });
+    }
+
+    if (shouldClose) {
+      host.emitRequestClose('verticalDrag');
+      return;
+    }
+
     if (panPos === correctedPanPosition) return;
-    const dampingRatio = correctedPanPosition === projectedPosition ? 1 : 0.82;
-    const initialBgOpacity = (host as { bgOpacity?: number }).bgOpacity ?? 1;
-    const totalPanDist = correctedPanPosition - panPos;
-    host.animations.startSpring({
-      isPan: true,
-      name: 'panGesture' + axis,
-      start: panPos,
-      end: correctedPanPosition,
-      velocity: velocity[axis],
-      dampingRatio,
-      onUpdate: (pos: number) => {
-        if (restoreBgOpacity && (host as { bgOpacity?: number }).bgOpacity !== undefined && (host as { bgOpacity: number }).bgOpacity < 1) {
-          const animationProgressRatio = 1 - (correctedPanPosition - pos) / totalPanDist;
-          host.applyBgOpacity(clamp(initialBgOpacity + (1 - initialBgOpacity) * animationProgressRatio, 0, 1));
-        }
-        curr.pan[axis] = Math.floor(pos);
-        curr.applyCurrentZoomPan();
-      },
-    });
   }
 
   // ─── Zoom handler (closure) ───
