@@ -230,6 +230,12 @@ export function useMainScroll(host: MainScrollHost): MainScrollAPI {
     return scrollX !== getCurrSlideX();
   }
 
+  function cancelPending(): void {
+    pendingDiff = 0;
+    scrollX = 0;
+    applyTransforms();
+  }
+
   function setItemHolders(holders: ItemHolder[]): void {
     itemHolders = holders;
     applyTransforms();
@@ -244,6 +250,7 @@ export function useMainScroll(host: MainScrollHost): MainScrollAPI {
     getX: () => scrollX,
     isShifted,
     updateCurrItem,
+    cancelPending,
     setItemHolders,
   };
 }

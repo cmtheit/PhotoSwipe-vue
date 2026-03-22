@@ -200,7 +200,10 @@ export function useSlideView(
         if (!initialized || newLen === 0) return;
 
         if (currIndex >= newLen) {
+          animations.stopMainScroll();
+          mainScroll.cancelPending();
           currIndex = newLen - 1;
+          potentialIndex = currIndex;
           emit('update:currentIndex', currIndex);
           for (let pos = 0; pos < itemHolders.length; pos += 1) {
             const holder = itemHolders[pos];
