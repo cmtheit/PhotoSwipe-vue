@@ -554,7 +554,7 @@ export function useGestures(host: GesturesHost): { bindEvents(): void; unbind():
       dragAxis = null;
       equalizePoints(startP1, p1);
     }
-    if (_numActivePoints > 1) _clearTapTimer();
+    if (_numActivePoints > 1) { _clearTapTimer(); isMultitouch = true; }
     else isMultitouch = false;
   };
 
