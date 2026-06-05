@@ -358,6 +358,7 @@ export interface MainScrollAPI {
   getX(): number;
   isShifted(): boolean;
   updateCurrItem(): void;
+  cancelPending(): void;
   setItemHolders(holders: ItemHolder[]): void;
 }
 
