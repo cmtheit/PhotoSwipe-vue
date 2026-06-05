@@ -32,18 +32,21 @@
           @bg-opacity-change="onBgOpacityChange"
           @slide-complete="isSliding = false"
         />
-        <PswpUI
-          :current-index="currentIndex"
-          :total-items="totalItems"
-          :is-sliding="isSliding"
-          :show-close="showClose"
-          :show-counter="showCounter"
-          :index-indicator-sep="indexIndicatorSep"
-          :close-title="closeTitle"
-          @close="handleClose"
-        >
-          <slot />
-        </PswpUI>
+        <Transition name="pswp-ui-fade">
+          <PswpUI
+            v-if="uiVisible"
+            :current-index="currentIndex"
+            :total-items="totalItems"
+            :is-sliding="isSliding"
+            :show-close="showClose"
+            :show-counter="showCounter"
+            :index-indicator-sep="indexIndicatorSep"
+            :close-title="closeTitle"
+            @close="handleClose"
+          >
+            <slot />
+          </PswpUI>
+        </Transition>
       </section>
       <slot name="overlay" />
     </div>
@@ -111,6 +114,7 @@ function onToggleUI() {
 
 const dataSource = computed<SlideData[]>(() => props.dataSource ?? []);
 const totalItems = computed(() => dataSource.value.length);
+const currentItem = computed(() => dataSource.value[currentIndex.value] ?? null);
 
 function clampIndex(i: number): number {
   const n = totalItems.value;
@@ -236,10 +240,13 @@ const rootClasses = computed(() => ({
   'pswp--has_mouse': true,
 }));
 
-const rootStyle = computed(() =>
-  props.zIndex != null ? { zIndex: props.zIndex } : undefined
-);
-
+const rootStyle = computed(() => {
+  if (props.zIndex == null) return undefined;
+  return {
+    zIndex: props.zIndex,
+    '--pswp-root-z-index': String(props.zIndex),
+  } as Record<string, string | number>;
+});
 
 const appendToTarget = computed(() => {
   const to = props.appendTo;
@@ -343,6 +350,7 @@ function onBgOpacityChange(opacity: number) {
 }
 
 function handleClose() {
+  slideViewRef.value?.pauseAllVideos?.();
   slideViewRef.value?.stopAllAnimations?.();
   opener.close();
 }
@@ -383,3 +391,20 @@ defineExpose<PhotoSwipeExpose>({
   recoverFromVerticalDrag,
 });
 </script>
+
+<style scoped>
+.pswp-ui-fade-enter-active,
+.pswp-ui-fade-leave-active {
+  transition: opacity var(--pswp-transition-duration, 333ms) cubic-bezier(0.4, 0, 0.22, 1);
+}
+
+.pswp-ui-fade-enter-from,
+.pswp-ui-fade-leave-to {
+  opacity: 0.005;
+}
+
+.pswp-ui-fade-enter-to,
+.pswp-ui-fade-leave-from {
+  opacity: 1;
+}
+</style>

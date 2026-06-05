@@ -37,6 +37,7 @@ export interface UseSlideViewDomRefs {
   holderEls: Ref<HTMLDivElement[]>;
   zoomWrapEls: Ref<HTMLDivElement[]>;
   imgEls: Ref<HTMLImageElement[]>;
+  videoEls: Ref<HTMLVideoElement[]>;
   htmlEls: Ref<HTMLDivElement[]>;
   scrollWrapEl: Ref<HTMLElement | null>;
 }
@@ -86,6 +87,12 @@ export function useSlideView(
       imgSrcset: '',
       imgAlt: '',
       imgSizes: '',
+      videoSrc: '',
+      videoPoster: '',
+      videoMime: '',
+      videoAutoplay: false,
+      videoControls: true,
+      videoPlaysInline: true,
       contentWidth: 0,
       contentHeight: 0,
       htmlContent: '',
@@ -177,6 +184,7 @@ export function useSlideView(
     const slide = new Slide(data, index, ctx as any, slot, {
       getContainerEl: () => domRefs.zoomWrapEls.value?.[slotIndex] ?? null,
       getImageEl: () => domRefs.imgEls.value?.[slotIndex] ?? null,
+      getVideoEl: () => domRefs.videoEls.value?.[slotIndex] ?? null,
       getHtmlEl: () => domRefs.htmlEls.value?.[slotIndex] ?? null,
     });
     if (index === currIndex) {
@@ -278,6 +286,11 @@ export function useSlideView(
       }
     });
   }
+  function pauseAllVideos(): void {
+    itemHolders.forEach((holder) => {
+      (holder.slide?.content as { pauseVideo?: () => void } | undefined)?.pauseVideo?.();
+    });
+  }
   function emitZoomStateFromCurrSlide(): void {
     const slide = currSlide as any;
     if (!slide) return;
@@ -327,6 +340,7 @@ export function useSlideView(
     createContentFromData,
     applyBgOpacity,
     appendHeavy,
+    pauseAllVideos,
     updateSize,
     get containerEl() {
       return domRefs.containerEl;
@@ -568,6 +582,9 @@ export function useSlideView(
     getCurrentSlideInitialZoom() {
       return (currSlide as any)?.zoomLevels?.initial ?? 1;
     },
+    getCurrentVideoElement() {
+      return (currSlide as any)?.getVideoElement?.() ?? null;
+    },
     handleResize() {
       updateSize(true);
     },
@@ -608,6 +625,7 @@ export function useSlideView(
     stopAllAnimations() {
       animations.stopAll();
     },
+    pauseAllVideos,
   };
 
   return { holderSlots, onImgLoad, onImgError, init, destroy, completeOpen, expose };

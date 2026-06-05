@@ -55,6 +55,7 @@ export class Slide implements SlideInstance {
   isFirstSlide: boolean;
   private _getContainerEl: () => HTMLDivElement | null;
   private _getImageEl: () => HTMLImageElement | null;
+  private _getVideoEl: () => HTMLVideoElement | null;
   private _getHtmlEl: () => HTMLDivElement | null;
 
   constructor(
@@ -65,6 +66,7 @@ export class Slide implements SlideInstance {
     domRefs: {
       getContainerEl: () => HTMLDivElement | null;
       getImageEl: () => HTMLImageElement | null;
+      getVideoEl: () => HTMLVideoElement | null;
       getHtmlEl: () => HTMLDivElement | null;
     }
   ) {
@@ -76,6 +78,7 @@ export class Slide implements SlideInstance {
     this.bounds = createPanBounds();
     this._getContainerEl = domRefs.getContainerEl;
     this._getImageEl = domRefs.getImageEl;
+    this._getVideoEl = domRefs.getVideoEl;
     this._getHtmlEl = domRefs.getHtmlEl;
 
     host.dispatch('gettingData', { slide: this, data: this.data, index: this.index });
@@ -428,6 +431,10 @@ export class Slide implements SlideInstance {
 
   getImageElement(): HTMLImageElement | null {
     return this._getImageEl();
+  }
+
+  getVideoElement(): HTMLVideoElement | null {
+    return this._getVideoEl();
   }
 
   getHtmlElement(): HTMLDivElement | null {

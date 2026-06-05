@@ -32,10 +32,24 @@
           @load="onImgLoad(i)"
           @error="onImgError(i)"
         >
+        <video
+          ref="videoRefs"
+          class="pswp__video"
+          :src="slot.videoSrc || undefined"
+          :poster="slot.videoPoster || undefined"
+          :controls="slot.videoControls"
+          :autoplay="slot.videoAutoplay"
+          :playsinline="slot.videoPlaysInline"
+          :webkit-playsinline="slot.videoPlaysInline ? 'true' : undefined"
+          preload="metadata"
+          :style="{ width: `${slot.contentWidth}px`, height: `${slot.contentHeight}px`, display: slot.contentType === 'video' && slot.contentAttached ? 'block' : 'none' }"
+        >
+          <source v-if="slot.videoSrc" :src="slot.videoSrc" :type="slot.videoMime || undefined">
+        </video>
         <div
           ref="htmlRefs"
           class="pswp__content"
-          :style="{ width: `${slot.contentWidth}px`, height: `${slot.contentHeight}px`, display: slot.contentType !== 'image' && slot.contentAttached ? 'block' : 'none' }"
+          :style="{ width: `${slot.contentWidth}px`, height: `${slot.contentHeight}px`, display: slot.contentType !== 'image' && slot.contentType !== 'video' && slot.contentAttached ? 'block' : 'none' }"
           v-html="slot.htmlContent"
         />
         <div
@@ -74,6 +88,7 @@ const containerRef = ref<HTMLElement | null>(null);
 const holderRefs = ref<HTMLDivElement[]>([]);
 const zoomWrapRefs = ref<HTMLDivElement[]>([]);
 const imgRefs = ref<HTMLImageElement[]>([]);
+const videoRefs = ref<HTMLVideoElement[]>([]);
 const htmlRefs = ref<HTMLDivElement[]>([]);
 const scrollWrapRef = ref<HTMLElement | null>(null);
 
@@ -94,6 +109,7 @@ const {
   holderEls: holderRefs,
   zoomWrapEls: zoomWrapRefs,
   imgEls: imgRefs,
+  videoEls: videoRefs,
   htmlEls: htmlRefs,
   scrollWrapEl: scrollWrapRef,
 });

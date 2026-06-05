@@ -1,5 +1,5 @@
 <template>
-  <div class="pswp__top-bar pswp__hide-on-close">
+  <div class="pswp__top-bar">
     <div v-if="showCounter" class="pswp__counter">
       {{ counterText }}
     </div>

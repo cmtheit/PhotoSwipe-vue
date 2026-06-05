@@ -17,7 +17,7 @@ import type { LoadState } from '../utils/dom';
 export class Content implements ContentInstance {
   data: SlideData;
   index: number;
-  element: HTMLImageElement | HTMLDivElement | undefined;
+  element: HTMLImageElement | HTMLVideoElement | HTMLDivElement | undefined;
   slide: SlideInstance | undefined;
 
   displayedImageWidth = 0;
@@ -64,6 +64,8 @@ export class Content implements ContentInstance {
     const prevSrc = this.data.src;
     const prevSrcset = this.data.srcset;
     const prevHtml = this.data.html;
+    const prevPoster = this.data.poster;
+    const prevMime = this.data.mime;
 
     this.data = newData;
     if (typeof newIndex === 'number') {
@@ -90,6 +92,8 @@ export class Content implements ContentInstance {
       slot.imgSrc = this.data.src ?? '';
       slot.imgSrcset = this.data.srcset ?? '';
       slot.imgAlt = this.data.alt ?? '';
+    } else if (this.isVideoContent()) {
+      this.syncVideoSlot(slot);
     } else {
       slot.htmlContent = this.data.html ?? '';
     }
@@ -98,7 +102,9 @@ export class Content implements ContentInstance {
       prevType !== this.type ||
       prevSrc !== this.data.src ||
       prevSrcset !== this.data.srcset ||
-      prevHtml !== this.data.html;
+      prevHtml !== this.data.html ||
+      prevPoster !== this.data.poster ||
+      prevMime !== this.data.mime;
 
     if (contentChanged) {
       this.state = LOAD_STATE.IDLE;
@@ -133,6 +139,13 @@ export class Content implements ContentInstance {
       if (this.displayedImageWidth) {
         this.loadImage(isLazy);
       }
+    } else if (this.isVideoContent()) {
+      if (slot) {
+        slot.contentType = 'video';
+        this.syncVideoSlot(slot);
+      }
+      this.element = this._getVideoElement() ?? undefined;
+      this.state = LOAD_STATE.LOADED;
     } else {
       if (slot) {
         slot.contentType = 'html';
@@ -216,6 +229,10 @@ export class Content implements ContentInstance {
     return this.type === 'image';
   }
 
+  isVideoContent(): boolean {
+    return this.type === 'video';
+  }
+
   setDisplayedSize(width: number, height: number): void {
     if (
       (this._host.dispatch('contentResize', { content: this, width, height }) as DispatchResult).defaultPrevented
@@ -285,6 +302,11 @@ export class Content implements ContentInstance {
   }
 
   destroy(): void {
+    const videoElement = this.isVideoContent() ? this._getVideoElement() : null;
+    if (videoElement) {
+      videoElement.pause();
+    }
+
     this.hasSlide = false;
     this.slide = undefined;
 
@@ -294,7 +316,13 @@ export class Content implements ContentInstance {
 
     this.remove();
 
-    if (this.isImageContent() && this.element) {
+    if (this.isVideoContent()) {
+      if (videoElement) {
+        videoElement.removeAttribute('src');
+        videoElement.load();
+      }
+      this.element = undefined;
+    } else if (this.isImageContent() && this.element) {
       this.element = undefined;
     }
   }
@@ -326,11 +354,10 @@ export class Content implements ContentInstance {
       return;
     }
 
-    const imageElement = this._getImageElement();
-    this.element = imageElement ?? undefined;
-    const supportsDecode = !!imageElement && 'decode' in imageElement;
-
     if (this.isImageContent()) {
+      const imageElement = this._getImageElement();
+      this.element = imageElement ?? undefined;
+      const supportsDecode = !!imageElement && 'decode' in imageElement;
       const slide = this.slide as unknown as { isActive?: boolean };
       if (supportsDecode && slide && imageElement && (!slide.isActive || isSafari())) {
         this.isDecoding = true;
@@ -343,6 +370,19 @@ export class Content implements ContentInstance {
           });
       } else {
         this.appendImage();
+      }
+    } else if (this.isVideoContent()) {
+      const slot = this._getSlot();
+      if (slot) {
+        slot.contentType = 'video';
+        this.syncVideoSlot(slot);
+        slot.contentAttached = true;
+      }
+      const video = this._getVideoElement();
+      this.element = video ?? undefined;
+      const slide = this.slide as unknown as { isActive?: boolean };
+      if (video && slide?.isActive && this.data.autoplay) {
+        void video.play().catch(() => {});
       }
     } else {
       const slot = this._getSlot();
@@ -374,10 +414,19 @@ export class Content implements ContentInstance {
     if (slot) {
       slot.ariaHidden = false;
     }
+    if (this.isVideoContent() && this.data.autoplay) {
+      const video = this._getVideoElement();
+      if (video) {
+        void video.play().catch(() => {});
+      }
+    }
   }
 
   deactivate(): void {
     this._host.dispatch('contentDeactivate', { content: this });
+    if (this.isVideoContent()) {
+      this.pauseVideo();
+    }
     const slide = this.slide as unknown as { holderElement?: HTMLElement };
     if (slide?.holderElement) {
       slide.holderElement.setAttribute('aria-hidden', 'true');
@@ -390,6 +439,9 @@ export class Content implements ContentInstance {
 
   remove(): void {
     this.isAttached = false;
+    if (this.isVideoContent()) {
+      this.pauseVideo();
+    }
 
     if ((this._host.dispatch('contentRemove', { content: this }) as DispatchResult).defaultPrevented) {
       return;
@@ -425,9 +477,29 @@ export class Content implements ContentInstance {
       ?.getImageElement?.() ?? null;
   }
 
+  private _getVideoElement(): HTMLVideoElement | null {
+    return (this.slide as unknown as { getVideoElement?: () => HTMLVideoElement | null })
+      ?.getVideoElement?.() ?? null;
+  }
+
   private _getHtmlElement(): HTMLDivElement | null {
     return (this.slide as unknown as { getHtmlElement?: () => HTMLDivElement | null })
       ?.getHtmlElement?.() ?? null;
+  }
+
+  private syncVideoSlot(slot: HolderSlot): void {
+    slot.videoSrc = this.data.src ?? '';
+    slot.videoPoster = this.data.poster ?? '';
+    slot.videoMime = this.data.mime ?? '';
+    slot.videoAutoplay = !!this.data.autoplay;
+    slot.videoControls = this.data.controls !== false;
+    slot.videoPlaysInline = this.data.playsInline !== false;
+  }
+
+  pauseVideo(): void {
+    const video = this._getVideoElement();
+    if (!video) return;
+    video.pause();
   }
 
   onImageLoad(): void {
@@ -448,6 +520,12 @@ export class Content implements ContentInstance {
     slot.imgSrcset = '';
     slot.imgAlt = '';
     slot.imgSizes = '';
+    slot.videoSrc = '';
+    slot.videoPoster = '';
+    slot.videoMime = '';
+    slot.videoAutoplay = false;
+    slot.videoControls = true;
+    slot.videoPlaysInline = true;
     slot.contentWidth = 0;
     slot.contentHeight = 0;
     slot.htmlContent = '';
@@ -459,6 +537,8 @@ export class Content implements ContentInstance {
   syncCurrentElements(): void {
     if (this.isImageContent()) {
       this.element = this._getImageElement() ?? undefined;
+    } else if (this.isVideoContent()) {
+      this.element = this._getVideoElement() ?? undefined;
     } else {
       this.element = this._getHtmlElement() ?? undefined;
     }

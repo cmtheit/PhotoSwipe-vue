@@ -24,9 +24,14 @@ export interface SlideData {
   /** @deprecated 使用 height */
   h?: number;
   alt?: string;
+  poster?: string;
+  mime?: string;
+  autoplay?: boolean;
+  controls?: boolean;
+  playsInline?: boolean;
   thumbCropped?: boolean;
   html?: string;
-  type?: 'image' | 'html' | string;
+  type?: 'image' | 'html' | 'video' | string;
   /** 缩略图元素，仅用于打开/关闭过渡动画的位置计算 */
   element?: HTMLElement;
   [key: string]: any;
@@ -95,6 +100,7 @@ export interface SlideViewExpose {
   currentSlideUsesPlaceholder(): boolean;
   getCurrentSlideWidth(): number;
   getCurrentSlideInitialZoom(): number;
+  getCurrentVideoElement(): HTMLVideoElement | null;
   handleResize(): void;
   toggleZoom(centerPoint?: Point): void;
   goTo(index: number): void;
@@ -106,6 +112,7 @@ export interface SlideViewExpose {
   appendHeavy(): void;
   setOpenerOpen(value: boolean): void;
   stopAllAnimations(): void;
+  pauseAllVideos(): void;
 }
 
 // ─── §1.3 PswpUI ───
@@ -232,6 +239,12 @@ export interface HolderSlot {
   imgSrcset: string;
   imgAlt: string;
   imgSizes: string;
+  videoSrc: string;
+  videoPoster: string;
+  videoMime: string;
+  videoAutoplay: boolean;
+  videoControls: boolean;
+  videoPlaysInline: boolean;
   contentWidth: number;
   contentHeight: number;
   htmlContent: string;
