@@ -98,10 +98,13 @@ export function useSlideView(
       htmlContent: '',
       isError: false,
       errorHtml: '',
+      item: null,
+      dataIndex: 0,
     }))
   );
 
   const options = (): Record<string, any> => ({
+    useSlideSlot: props.useSlideSlot ?? false,
     spacing: props.spacing ?? 0.1,
     easing: props.easing ?? 'cubic-bezier(.4,0,.22,1)',
     zoomAnimationDuration: props.zoomAnimationDuration ?? 333,
@@ -252,11 +255,20 @@ export function useSlideView(
 
           const { data, resolvedIndex } = newState;
           if (!data || resolvedIndex === null) {
+            if (holder.slot) {
+              holder.slot.item = null;
+            }
             if (holder.slide) {
               holder.slide.destroy();
               holder.slide = undefined;
             }
             return;
+          }
+
+          // 作用域插槽模式：把当前 holder 绑定的数据 / 索引同步给 slot，供 PswpSlideView 渲染 #slide
+          if (holder.slot) {
+            holder.slot.item = data;
+            holder.slot.dataIndex = resolvedIndex;
           }
 
           if (oldState && oldState.data === data && oldState.resolvedIndex === resolvedIndex) {
@@ -302,6 +314,12 @@ export function useSlideView(
     const clickToZoom = zoomAllowed && slide.zoomLevels?.secondary !== slide.zoomLevels?.initial;
     emit('zoomStateChange', { zoomedIn, zoomAllowed, clickToZoom });
   }
+
+  eventable.on('reachBoundary', (e: any) => {
+    const direction = e.direction === 'prev' ? 'prev' : 'next';
+    const index = typeof e.index === 'number' ? e.index : currIndex;
+    emit('reachBoundary', { direction, index });
+  });
 
   const ctx = {
     get viewportSize() {

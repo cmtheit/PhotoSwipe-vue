@@ -67,6 +67,8 @@ export interface ZoomState {
 export interface SlideViewProps {
   items: SlideData[];
   currentIndex: number;
+  /** 消费方通过 #slide 作用域插槽自定义幻灯片内容（图片/视频）时为 true */
+  useSlideSlot?: boolean;
   loop?: boolean;
   spacing?: number;
   allowPanToNext?: boolean;
@@ -87,6 +89,7 @@ export interface SlideViewEmits {
   zoomStateChange: [state: ZoomState];
   bgOpacityChange: [opacity: number];
   slideComplete: [];
+  reachBoundary: [payload: { direction: 'prev' | 'next'; index: number }];
 }
 
 export interface SlideViewExpose {
@@ -197,6 +200,8 @@ export interface PhotoSwipeEmits {
   afterInit: [];
   /** 当前索引变化时触发 */
   change: [payload: { index: number }];
+  /** loop=false 时用户尝试越过首尾但索引未变化 */
+  reachBoundary: [payload: { direction: 'prev' | 'next'; index: number }];
   /** 关闭时触发 */
   close: [];
   /** 关闭动画结束、组件即将卸载时触发 */
@@ -250,6 +255,10 @@ export interface HolderSlot {
   htmlContent: string;
   isError: boolean;
   errorHtml: string;
+  /** 作用域插槽模式：当前 holder 绑定的幻灯片数据 */
+  item: SlideData | null;
+  /** 作用域插槽模式：当前 holder 绑定的数据索引（resolved） */
+  dataIndex: number;
 }
 
 /** Content 实例最小接口（slide/content 用） */

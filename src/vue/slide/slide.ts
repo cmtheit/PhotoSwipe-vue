@@ -429,6 +429,10 @@ export class Slide implements SlideInstance {
     this.host.dispatch('resolutionChanged');
   }
 
+  getContainerElement(): HTMLElement | null {
+    return this.container ?? this._getContainerEl();
+  }
+
   getImageElement(): HTMLImageElement | null {
     return this._getImageEl();
   }

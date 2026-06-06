@@ -131,6 +131,25 @@ export class Content implements ContentInstance {
       }
     }
 
+    // 作用域插槽模式：图片/视频都由消费方的 #slide 组件渲染。
+    // 不创建原生 <img>/<video>；以 zoom-wrap 容器作为 this.element 让生命周期守卫通过；
+    // 图片完成由组件 onReady → onImgLoad 驱动，视频直接视为已就绪。
+    if (this.slotMode && (this.isImageContent() || this.isVideoContent())) {
+      if (slot) {
+        slot.contentType = this.type;
+      }
+      this.element = this._getContainerElement() ?? undefined;
+      if (this.isVideoContent()) {
+        this.state = LOAD_STATE.LOADED;
+      } else {
+        this.state = LOAD_STATE.LOADING;
+      }
+      if (reload && this.slide) {
+        (this.slide as unknown as { updateContentSize(force?: boolean): void }).updateContentSize(true);
+      }
+      return;
+    }
+
     if (this.isImageContent()) {
       if (slot) {
         slot.contentType = 'image';
@@ -164,6 +183,13 @@ export class Content implements ContentInstance {
       !this.isImageContent() ||
       (this._host.dispatch('contentLoadImage', { content: this, isLazy }) as DispatchResult).defaultPrevented
     ) {
+      return;
+    }
+
+    // 插槽模式：无原生 <img>，加载/就绪由消费方组件经 onImgLoad 驱动
+    if (this.slotMode) {
+      this.element = this._getContainerElement() ?? undefined;
+      this.state = LOAD_STATE.LOADING;
       return;
     }
 
@@ -354,6 +380,13 @@ export class Content implements ContentInstance {
       return;
     }
 
+    // 插槽模式：图片/视频统一直接 appendImage（标记 contentAttached），不走原生 decode
+    if (this.slotMode && (this.isImageContent() || this.isVideoContent())) {
+      this.element = this._getContainerElement() ?? undefined;
+      this.appendImage();
+      return;
+    }
+
     if (this.isImageContent()) {
       const imageElement = this._getImageElement();
       this.element = imageElement ?? undefined;
@@ -472,6 +505,16 @@ export class Content implements ContentInstance {
     return (this.slide as unknown as { slot?: HolderSlot })?.slot ?? null;
   }
 
+  /** 作用域插槽模式：消费方用 #slide 渲染图片/视频（如 kabegame 的 ImageContent） */
+  private get slotMode(): boolean {
+    return !!this._host.options?.useSlideSlot;
+  }
+
+  private _getContainerElement(): HTMLElement | null {
+    return (this.slide as unknown as { getContainerElement?: () => HTMLElement | null })
+      ?.getContainerElement?.() ?? null;
+  }
+
   private _getImageElement(): HTMLImageElement | null {
     return (this.slide as unknown as { getImageElement?: () => HTMLImageElement | null })
       ?.getImageElement?.() ?? null;
@@ -535,6 +578,10 @@ export class Content implements ContentInstance {
   }
 
   syncCurrentElements(): void {
+    if (this.slotMode && (this.isImageContent() || this.isVideoContent())) {
+      this.element = this._getContainerElement() ?? undefined;
+      return;
+    }
     if (this.isImageContent()) {
       this.element = this._getImageElement() ?? undefined;
     } else if (this.isVideoContent()) {

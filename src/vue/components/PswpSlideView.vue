@@ -21,7 +21,25 @@
         style="transform-origin: 0 0"
         :style="{ transform: slot.transformStyle, display: slot.hasSlide ? 'block' : 'none' }"
       >
+        <!-- 作用域插槽模式：图片/视频由消费方组件渲染（如 ImageContent，缩略图→原图流式覆盖） -->
+        <div
+          v-if="useSlideSlot && (slot.contentType === 'image' || slot.contentType === 'video') && slot.item"
+          class="pswp__img pswp__slide-slot"
+          :style="{ width: `${slot.contentWidth}px`, height: `${slot.contentHeight}px`, display: slot.contentAttached ? 'block' : 'none' }"
+        >
+          <slot
+            name="slide"
+            :item="slot.item"
+            :index="slot.dataIndex"
+            :active="!slot.ariaHidden"
+            :width="slot.contentWidth"
+            :height="slot.contentHeight"
+            :onReady="() => onImgLoad(i)"
+            :onError="() => onImgError(i)"
+          />
+        </div>
         <img
+          v-if="!useSlideSlot"
           ref="imgRefs"
           class="pswp__img"
           :src="slot.imgSrc || undefined"
@@ -33,6 +51,7 @@
           @error="onImgError(i)"
         >
         <video
+          v-if="!useSlideSlot"
           ref="videoRefs"
           class="pswp__video"
           :src="slot.videoSrc || undefined"
@@ -72,6 +91,7 @@ import { useSlideView } from '../composables/useSlideView';
 const props = withDefaults(
   defineProps<SlideViewProps>(),
   {
+    useSlideSlot: false,
     loop: true,
     spacing: 0.1,
     allowPanToNext: true,

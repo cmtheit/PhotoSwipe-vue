@@ -15,6 +15,7 @@
           ref="slideViewRef"
           :items="dataSource"
           :current-index="currentIndex"
+          :use-slide-slot="hasSlideSlot"
           :loop="loop"
           :spacing="spacing"
           :allow-pan-to-next="allowPanToNext"
@@ -31,7 +32,12 @@
           @toggleUI="onToggleUI"
           @bg-opacity-change="onBgOpacityChange"
           @slide-complete="isSliding = false"
-        />
+          @reach-boundary="onReachBoundary"
+        >
+          <template v-if="hasSlideSlot" #slide="slotProps">
+            <slot name="slide" v-bind="slotProps" />
+          </template>
+        </PswpSlideView>
         <Transition name="pswp-ui-fade">
           <PswpUI
             v-if="uiVisible"
@@ -54,10 +60,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, nextTick, onBeforeUnmount } from 'vue';
+import { ref, computed, watch, nextTick, onBeforeUnmount, useSlots } from 'vue';
 import type { PhotoSwipeProps, PhotoSwipeEmits, PhotoSwipeExpose, SlideData } from './types';
 
 defineOptions({ inheritAttrs: false });
+
+const slots = useSlots();
+/** 消费方是否提供了 #slide 作用域插槽（自定义每张幻灯片渲染） */
+const hasSlideSlot = computed(() => !!slots.slide);
 import { getViewportSize } from './utils/viewport';
 import { getThumbBounds } from './utils/thumb-bounds';
 import { Animations } from './core/animations';
@@ -347,6 +357,10 @@ function onBgOpacityChange(opacity: number) {
     const finalOpacity = (props.bgOpacity ?? 0.8) * opacity;
     bgRef.value.style.opacity = String(finalOpacity);
   }
+}
+
+function onReachBoundary(payload: { direction: 'prev' | 'next'; index: number }) {
+  emit('reachBoundary', payload);
 }
 
 function handleClose() {

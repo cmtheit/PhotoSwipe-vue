@@ -406,8 +406,15 @@ export function useGestures(host: GesturesHost): { bindEvents(): void; unbind():
   }
   function tapClick(point: Point, e: Event): void {
     const target = (e.target as HTMLElement);
-    const isImageClick = target.classList?.contains('pswp__img');
-    const isBgClick = target.classList?.contains('pswp__item') || target.classList?.contains('pswp__zoom-wrap');
+    // 视频幻灯片：鼠标点击也走“切换控件”（视频随控件显隐播放/暂停），不做缩放/关闭
+    const curr = host.getCurrSlide() as unknown as { data?: { type?: string } } | null;
+    if (curr?.data?.type === 'video') {
+      doClickOrTapAction('tap', point, e);
+      return;
+    }
+    // 用 closest 兼容作用域插槽：内层自定义元素 class 不是 pswp__img，但其宿主有 pswp__img
+    const isImageClick = !!target.closest?.('.pswp__img');
+    const isBgClick = !!target.closest?.('.pswp__item, .pswp__zoom-wrap');
     if (isImageClick) doClickOrTapAction('imageClick', point, e);
     else if (isBgClick) doClickOrTapAction('bgClick', point, e);
   }

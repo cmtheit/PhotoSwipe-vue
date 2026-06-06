@@ -155,6 +155,7 @@ export function useMainScroll(host: MainScrollHost): MainScrollAPI {
   }
 
   function moveIndexBy(diff: number, animate?: boolean, velocityX?: number, onSlideComplete?: () => void): boolean {
+    const requestedDiff = diff;
     let newIndex = host.getPotentialIndex() + diff;
     const numSlides = host.getNumItems();
 
@@ -171,6 +172,12 @@ export function useMainScroll(host: MainScrollHost): MainScrollAPI {
     host.animations.stopMainScroll?.();
 
     if (!diff) {
+      if (!host.canLoop() && requestedDiff !== 0) {
+        host.dispatch('reachBoundary', {
+          direction: requestedDiff > 0 ? 'next' : 'prev',
+          index: host.getPotentialIndex(),
+        });
+      }
       const destinationX = getCurrSlideX();
       if (!animate) {
         moveTo(destinationX);
