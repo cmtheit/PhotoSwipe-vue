@@ -255,10 +255,6 @@ export interface HolderSlot {
   htmlContent: string;
   isError: boolean;
   errorHtml: string;
-  /** 作用域插槽模式：当前 holder 绑定的幻灯片数据 */
-  item: SlideData | null;
-  /** 作用域插槽模式：当前 holder 绑定的数据索引（resolved） */
-  dataIndex: number;
 }
 
 /** Content 实例最小接口（slide/content 用） */

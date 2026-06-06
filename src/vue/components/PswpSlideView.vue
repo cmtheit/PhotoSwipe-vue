@@ -23,14 +23,14 @@
       >
         <!-- 作用域插槽模式：图片/视频由消费方组件渲染（如 ImageContent，缩略图→原图流式覆盖） -->
         <div
-          v-if="useSlideSlot && (slot.contentType === 'image' || slot.contentType === 'video') && slot.item"
+          v-if="useSlideSlot && (slot.contentType === 'image' || slot.contentType === 'video') && getSlotItem(i)"
           class="pswp__img pswp__slide-slot"
           :style="{ width: `${slot.contentWidth}px`, height: `${slot.contentHeight}px`, display: slot.contentAttached ? 'block' : 'none' }"
         >
           <slot
             name="slide"
-            :item="slot.item"
-            :index="slot.dataIndex"
+            :item="getSlotItem(i)"
+            :index="getSlotDataIndex(i)"
             :active="!slot.ariaHidden"
             :width="slot.contentWidth"
             :height="slot.contentHeight"
@@ -118,6 +118,8 @@ onMounted(() => {
 
 const {
   holderSlots,
+  getSlotItem,
+  getSlotDataIndex,
   onImgLoad,
   onImgError,
   init,

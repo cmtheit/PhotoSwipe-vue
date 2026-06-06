@@ -53,6 +53,8 @@ export function useSlideView(
   init(initialIndex: number): void;
   destroy(): void;
   completeOpen(): void;
+  getSlotItem(slotIndex: number): SlideData | null;
+  getSlotDataIndex(slotIndex: number): number | null;
   expose: SlideViewExpose;
 } {
   const eventable = new Eventable();
@@ -71,6 +73,7 @@ export function useSlideView(
   let initialized = false;
   let resizeHandler: (() => void) | null = null;
   let itemHolders: ItemHolder[] = [];
+  let sourceVersion = 0;
   const holderLogicalIndices = reactive<number[]>([0, 0, 0]);
   const holderEnabled = reactive<boolean[]>([false, false, false]);
   const holderWatchStops: WatchStopHandle[] = [];
@@ -98,9 +101,25 @@ export function useSlideView(
       htmlContent: '',
       isError: false,
       errorHtml: '',
-      item: null,
-      dataIndex: 0,
     }))
+  );
+
+  const holderSlideStates = computed(() =>
+    holderSlots.map((_slot, slotIndex) => {
+      if (!holderEnabled[slotIndex]) {
+        return {
+          item: null as SlideData | null,
+          dataIndex: null as number | null,
+        };
+      }
+
+      const logicalIndex = holderLogicalIndices[slotIndex];
+      const resolvedIndex = getResolvedIndex(logicalIndex);
+      return {
+        item: getSlideDataByIndex(logicalIndex, props.items, canLoop()),
+        dataIndex: resolvedIndex,
+      };
+    })
   );
 
   const options = (): Record<string, any> => ({
@@ -134,11 +153,24 @@ export function useSlideView(
     const i = getLoopedIndex(index);
     return props.items[i];
   }
+  function getItemKey(index: number, data = getItemData(index)): string {
+    const stableKey = data?.id ?? data?.src ?? data?.srcset ?? data?.poster ?? data?.html;
+    if (stableKey !== undefined && stableKey !== null && String(stableKey) !== '') {
+      return `${typeof stableKey}:${String(stableKey)}`;
+    }
+    return `source:${sourceVersion}:index:${index}`;
+  }
   function getResolvedIndex(logicalIndex: number): number | null {
     return resolveIndex(logicalIndex, getNumItems(), canLoop());
   }
   function getHolderBySlotIndex(slotIndex: number): ItemHolder | undefined {
     return itemHolders.find((holder) => holder.slotIndex === slotIndex);
+  }
+  function getSlotItem(slotIndex: number): SlideData | null {
+    return holderSlideStates.value[slotIndex]?.item ?? null;
+  }
+  function getSlotDataIndex(slotIndex: number): number | null {
+    return holderSlideStates.value[slotIndex]?.dataIndex ?? null;
   }
   function getViewportCenterPoint(): Point {
     return { x: viewportSize.x / 2, y: viewportSize.y / 2 };
@@ -177,7 +209,7 @@ export function useSlideView(
     if (!slot) return;
 
     if (holder.slide) {
-      if (holder.slide.index === index && !force) {
+      if (holder.slide.index === index && holder.slide.data === data && !force) {
         return;
       }
       holder.slide.destroy();
@@ -227,6 +259,14 @@ export function useSlideView(
     );
     holderWatchStops.push(itemCountStop);
 
+    const sourceVersionStop = watch(
+      () => props.items,
+      () => {
+        sourceVersion += 1;
+      }
+    );
+    holderWatchStops.push(sourceVersionStop);
+
     for (let slotIndex = 0; slotIndex < 3; slotIndex += 1) {
       const resolvedState = computed(() => {
         if (!holderEnabled[slotIndex]) {
@@ -255,20 +295,11 @@ export function useSlideView(
 
           const { data, resolvedIndex } = newState;
           if (!data || resolvedIndex === null) {
-            if (holder.slot) {
-              holder.slot.item = null;
-            }
             if (holder.slide) {
               holder.slide.destroy();
               holder.slide = undefined;
             }
             return;
-          }
-
-          // 作用域插槽模式：把当前 holder 绑定的数据 / 索引同步给 slot，供 PswpSlideView 渲染 #slide
-          if (holder.slot) {
-            holder.slot.item = data;
-            holder.slot.dataIndex = resolvedIndex;
           }
 
           if (oldState && oldState.data === data && oldState.resolvedIndex === resolvedIndex) {
@@ -281,6 +312,9 @@ export function useSlideView(
           }
 
           (holder.slide as Slide).updateData(data, resolvedIndex);
+          if (holder.slide.content) {
+            contentLoader.addToCache(holder.slide.content);
+          }
         },
         { immediate: true, deep: true }
       );
@@ -353,6 +387,7 @@ export function useSlideView(
     },
     getNumItems,
     getLoopedIndex,
+    getItemKey,
     canLoop,
     getItemData,
     getViewportCenterPoint,
@@ -402,6 +437,7 @@ export function useSlideView(
     getNumItems,
     getLoopedIndex,
     getItemData,
+    getItemKey,
     createContentFromData,
     dispatch: eventable.dispatch.bind(eventable),
     get options() {
@@ -493,6 +529,7 @@ export function useSlideView(
       eventable.dispatch('firstZoomPan', { slide });
       (slide as any).applyCurrentZoomPan?.();
       eventable.dispatch('afterSetContent', { slide });
+      slide.setIsActive?.(true);
     }
 
     resizeHandler = () => updateSize(true);
@@ -649,5 +686,15 @@ export function useSlideView(
     pauseAllVideos,
   };
 
-  return { holderSlots, onImgLoad, onImgError, init, destroy, completeOpen, expose };
+  return {
+    holderSlots,
+    getSlotItem,
+    getSlotDataIndex,
+    onImgLoad,
+    onImgError,
+    init,
+    destroy,
+    completeOpen,
+    expose,
+  };
 }

@@ -13,11 +13,20 @@ import type {
 
 const MIN_SLIDES_TO_CACHE = 5;
 
+type CacheableContent = ContentInstance & {
+  index: number;
+  data?: SlideData;
+  isAttached?: boolean;
+  hasSlide?: boolean;
+  __pswpCacheKey?: string;
+};
+
 /** useContentLoader 所需的 host 最小接口 */
 export interface ContentLoaderHost {
   getNumItems(): number;
   getLoopedIndex(index: number): number;
   getItemData(index: number): SlideData;
+  getItemKey(index: number, data?: SlideData): string;
   createContentFromData(data: SlideData, index: number): ContentInstance;
   dispatch(name: string, details?: any): DispatchResult;
   options: { preload: [number, number] };
@@ -31,22 +40,41 @@ export function useContentLoader(host: ContentLoaderHost): ContentLoaderAPI {
   );
   const _cachedItems: ContentInstance[] = [];
 
+  function getContentCacheKey(content: ContentInstance): string {
+    const cacheable = content as CacheableContent;
+    const cachedKey = cacheable.__pswpCacheKey;
+    if (cachedKey) return cachedKey;
+    return host.getItemKey(cacheable.index, cacheable.data);
+  }
+
+  function setContentCacheKey(content: ContentInstance): void {
+    const cacheable = content as CacheableContent;
+    cacheable.__pswpCacheKey = host.getItemKey(cacheable.index, cacheable.data);
+  }
+
   function getContentByIndex(index: number): ContentInstance | undefined {
-    return _cachedItems.find((c) => (c as { index: number }).index === index);
+    const key = host.getItemKey(index);
+    return _cachedItems.find((c) => getContentCacheKey(c) === key);
   }
 
   function removeByIndex(index: number): void {
-    const i = _cachedItems.findIndex((c) => (c as { index: number }).index === index);
+    const key = host.getItemKey(index);
+    const i = _cachedItems.findIndex((c) => getContentCacheKey(c) === key);
     if (i !== -1) _cachedItems.splice(i, 1);
   }
 
   function addToCache(content: ContentInstance): void {
-    const idx = (content as { index: number }).index;
-    removeByIndex(idx);
+    setContentCacheKey(content);
+    const key = getContentCacheKey(content);
+    const i = _cachedItems.findIndex((c) => getContentCacheKey(c) === key);
+    if (i !== -1) _cachedItems.splice(i, 1);
     _cachedItems.push(content);
     if (_cachedItems.length > limit) {
       const indexToRemove = _cachedItems.findIndex(
-        (item) => !(item as { isAttached: boolean }).isAttached && !(item as { hasSlide: boolean }).hasSlide
+        (item) => {
+          const cacheable = item as CacheableContent;
+          return !cacheable.isAttached && !cacheable.hasSlide;
+        }
       );
       if (indexToRemove !== -1) {
         const removed = _cachedItems.splice(indexToRemove, 1)[0];
@@ -68,9 +96,16 @@ export function useContentLoader(host: ContentLoaderHost): ContentLoaderAPI {
   }
 
   function getContentBySlide(slide: SlideInstance): ContentInstance {
-    let content = getContentByIndex(slide.index);
+    const key = host.getItemKey(slide.index, slide.data);
+    let content = _cachedItems.find((c) => getContentCacheKey(c) === key);
     if (!content) {
       content = host.createContentFromData(slide.data, slide.index);
+      addToCache(content);
+    } else if (
+      (content as CacheableContent).index !== slide.index ||
+      (content as CacheableContent).data !== slide.data
+    ) {
+      content.updateData?.(slide.data, slide.index);
       addToCache(content);
     }
     (content as { setSlide?: (s: SlideInstance) => void }).setSlide?.(slide);
