@@ -194,24 +194,7 @@ export function useSlideView(
     holderWatchStops.forEach((stop) => stop());
     holderWatchStops.length = 0;
 
-    const itemCountStop = watch(
-      () => props.items?.length ?? 0,
-      (newLen) => {
-        if (!initialized || newLen === 0) return;
-
-        if (currIndex >= newLen) {
-          currIndex = newLen - 1;
-          emit('update:currentIndex', currIndex);
-          for (let pos = 0; pos < itemHolders.length; pos += 1) {
-            const holder = itemHolders[pos];
-            if (holder && holder.slotIndex !== undefined) {
-              setHolderLogicalIndex(holder.slotIndex, currIndex + pos - 1);
-            }
-          }
-        }
-      }
-    );
-    holderWatchStops.push(itemCountStop);
+    // itemCountStop watcher 已被移除，由 PhotoSwipe.vue 的 dataSource watcher 处理
 
     for (let slotIndex = 0; slotIndex < 3; slotIndex += 1) {
       const resolvedState = computed(() => {
