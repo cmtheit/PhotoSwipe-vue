@@ -34,3 +34,4 @@ images/*
 !images/.gitkeep
 .cursor
 /bun.lock
+dist
