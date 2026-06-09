@@ -445,7 +445,7 @@ export function useSlideView(
 
     resizeHandler = () => updateSize(true);
     window.addEventListener('resize', resizeHandler);
-    
+
     // 转发 verticalDrag 事件到外部回调
     if (props.onVerticalDrag) {
       eventable.on('verticalDrag', (e: any) => {
@@ -459,7 +459,7 @@ export function useSlideView(
         }
       });
     }
-    
+
     eventable.dispatch('bindEvents');
     gesturesBind?.bindEvents();
 
@@ -587,6 +587,9 @@ export function useSlideView(
     },
     setOpenerOpen(value: boolean) {
       _openerIsOpen = value;
+    },
+    stopAllAnimations() {
+      animations.stopAll();
     },
   };
 

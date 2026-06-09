@@ -52,8 +52,8 @@ const counterText = computed(
 <style scoped>
 /* 移动端顶部安全区：控件（叉号、总数）不与之重叠 */
 .pswp__top-bar {
-  padding-top: env(safe-area-inset-top, 0px);
-  min-height: calc(60px + env(safe-area-inset-top, 0px));
+  padding-top: var(--sat, env(safe-area-inset-top, 0px));
+  min-height: calc(60px + var(--sat, env(safe-area-inset-top, 0px)));
   box-sizing: border-box;
 }
 </style>
