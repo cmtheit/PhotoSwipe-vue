@@ -68,6 +68,13 @@ defineOptions({ inheritAttrs: false });
 const slots = useSlots();
 /** 消费方是否提供了 #slide 作用域插槽（自定义每张幻灯片渲染） */
 const hasSlideSlot = computed(() => !!slots.slide);
+
+watch(hasSlideSlot,() => {
+  console.log('has slide slot', hasSlideSlot.value)
+}, {
+  immediate: true
+})
+
 import { getViewportSize } from './utils/viewport';
 import { getThumbBounds } from './utils/thumb-bounds';
 import { Animations } from './core/animations';
@@ -108,6 +115,7 @@ const slideViewRef = ref<InstanceType<typeof PswpSlideView> | null>(null);
 
 const isMounted = ref(false);
 const currentIndex = ref(0);
+const currentSlideId = ref<string | null>(null);
 const isSliding = ref(false);
 const bgOpacityRef = ref(1);
 /** 系统返回（手机/浏览器后退）时关闭遮罩：pushState + popstate */
@@ -130,6 +138,10 @@ function clampIndex(i: number): number {
   const n = totalItems.value;
   if (n <= 0) return 0;
   return Math.max(0, Math.min(i, n - 1));
+}
+
+function getSlideId(data: SlideData, index: number): string {
+  return data.id ?? String(index);
 }
 
 function getOptions(): Record<string, unknown> {
@@ -268,6 +280,10 @@ const appendToTarget = computed(() => {
 function runInit() {
   const idx = clampIndex(props.index);
   currentIndex.value = idx;
+  const data = dataSource.value[idx];
+  if (data) {
+    currentSlideId.value = getSlideId(data, idx);
+  }
   slideViewRef.value?.init(idx);
   opener.open();
 }
@@ -323,15 +339,51 @@ watch(
 watch(
   dataSource,
   () => {
-    currentIndex.value = clampIndex(currentIndex.value);
+    if (!currentSlideId.value || dataSource.value.length === 0) {
+      return;
+    }
+
+    // 在新 dataSource 中查找之前持有的 slide ID
+    const newDataSource = dataSource.value;
+    const foundIndex = newDataSource.findIndex((item, idx) => getSlideId(item, idx) === currentSlideId.value);
+
+    if (foundIndex !== -1) {
+      // 找到且 index 变化
+      if (foundIndex !== currentIndex.value) {
+        slideViewRef.value?.goTo(foundIndex);
+        onSlideIndexChange(foundIndex, 'id-relocated');
+      }
+      // 找到且 index 不变：不做操作
+    } else {
+      // 没找到
+      if (newDataSource.length === 0) {
+        // 列表为空：关闭预览
+        handleClose();
+      } else if (newDataSource.length <= currentIndex.value) {
+        // 超出边界：导航到最后一张
+        const lastIndex = newDataSource.length - 1;
+        slideViewRef.value?.goTo(lastIndex);
+        onSlideIndexChange(lastIndex, 'bounds-exceeded');
+      } else {
+        // 在边界内：保持 index，更新 currentSlideId
+        const data = newDataSource[currentIndex.value];
+        if (data) {
+          currentSlideId.value = getSlideId(data, currentIndex.value);
+        }
+      }
+    }
   },
   { deep: true }
 );
 
-function onSlideIndexChange(index: number) {
+function onSlideIndexChange(index: number, reason?: string) {
   currentIndex.value = index;
+  const data = dataSource.value[index];
+  if (data) {
+    currentSlideId.value = getSlideId(data, index);
+  }
   emit('update:index', index);
-  emit('change', { index });
+  emit('change', { index, reason });
 }
 
 function onRequestClose(source?: string) {

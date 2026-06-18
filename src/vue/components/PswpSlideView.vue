@@ -23,7 +23,7 @@
       >
         <!-- 作用域插槽模式：图片/视频由消费方组件渲染（如 ImageContent，缩略图→原图流式覆盖） -->
         <div
-          v-if="useSlideSlot && (slot.contentType === 'image' || slot.contentType === 'video') && getSlotItem(i)"
+          v-if="useSlideSlot"
           class="pswp__img pswp__slide-slot"
           :style="{ width: `${slot.contentWidth}px`, height: `${slot.contentHeight}px`, display: slot.contentAttached ? 'block' : 'none' }"
         >
@@ -39,7 +39,7 @@
           />
         </div>
         <img
-          v-if="!useSlideSlot"
+          v-if="!useSlideSlot && slot.contentType == 'image'"
           ref="imgRefs"
           class="pswp__img"
           :src="slot.imgSrc || undefined"
@@ -51,7 +51,7 @@
           @error="onImgError(i)"
         >
         <video
-          v-if="!useSlideSlot"
+          v-if="!useSlideSlot && slot.contentType == 'video'"
           ref="videoRefs"
           class="pswp__video"
           :src="slot.videoSrc || undefined"
