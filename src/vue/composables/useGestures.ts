@@ -47,6 +47,8 @@ export interface GesturesHost {
   emitRequestClose(source?: string): void;
   /** 点击/轻触时若 action 为 toggle-controls 则调用，用于切换 UI 显示 */
   toggleUI?(): void;
+  /** 视频幻灯片被双击时调用（替代默认 zoom），用于宿主切换播放/暂停等 */
+  videoDoubleTap?(point: Point, originalEvent: Event): void;
   emitZoomStateChange?(state: ZoomState): void;
   events: DOMEvents;
 }
@@ -424,7 +426,14 @@ export function useGestures(host: GesturesHost): { bindEvents(): void; unbind():
   }
   function tapDoubleTap(point: Point, e: Event): void {
     const target = (e.target as HTMLElement).closest?.('.pswp__container');
-    if (target) doClickOrTapAction('doubleTap', point, e);
+    if (!target) return;
+    // 视频幻灯片：双击交给宿主处理（如切换播放/暂停），不做缩放
+    const curr = host.getCurrSlide() as unknown as { data?: { type?: string } } | null;
+    if (curr?.data?.type === 'video') {
+      host.videoDoubleTap?.(point, e);
+      return;
+    }
+    doClickOrTapAction('doubleTap', point, e);
   }
 
   // ─── Pointer/touch handling ───

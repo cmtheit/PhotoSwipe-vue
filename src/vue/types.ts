@@ -88,6 +88,7 @@ export interface SlideViewEmits {
   'update:currentIndex': [index: number];
   requestClose: [source?: string];
   toggleUI: [];
+  videoDoubleTap: [];
   zoomStateChange: [state: ZoomState];
   bgOpacityChange: [opacity: number];
   slideComplete: [];
@@ -109,6 +110,8 @@ export interface SlideViewExpose {
   handleResize(): void;
   toggleZoom(centerPoint?: Point): void;
   goTo(index: number): void;
+  /** 同一张幻灯片在 dataSource 中位置变化时重定基索引：不导航、不重建 slide、保留缩放 */
+  relocate(index: number): void;
   getContainerElement(): HTMLElement | null;
   getHolderElements(): HTMLDivElement[];
   isScrollShifted(): boolean;
@@ -212,6 +215,8 @@ export interface PhotoSwipeEmits {
   verticalDrag: [payload: { panY: number }];
   /** 控件栏显示/隐藏切换时触发（如点击图片切换顶部栏），便于安卓单图时联动显示 ActionSheet */
   uiVisibleChange: [payload: { visible: boolean }];
+  /** 当前视频幻灯片被双击时触发（视频双击不做缩放），供宿主切换播放/暂停 */
+  videoDoubleTap: [];
 }
 
 export interface PhotoSwipeExpose {

@@ -469,6 +469,7 @@ export function useSlideView(
     getOpenerIsOpen: () => _openerIsOpen,
     emitRequestClose: (source?: string) => emit('requestClose', source),
     toggleUI: () => emit('toggleUI'),
+    videoDoubleTap: () => emit('videoDoubleTap'),
     events,
   };
   Object.defineProperty(gesturesHost, 'bgOpacity', { get: () => bgOpacity });
@@ -633,7 +634,30 @@ export function useSlideView(
       const n = getNumItems();
       const i = Math.max(0, Math.min(index, n - 1));
       const diff = i - potentialIndex;
+      // 已在该索引或正在动画前往：直接返回。提前结算会在动画途中 dispatch change，
+      // 父层 :index 回声若走 moveIndexBy(0) 会 stopMainScroll 打断在途结算动画。
+      if (!diff) return;
       mainScroll?.moveIndexBy(diff, true, undefined, () => emit('slideComplete'));
+    },
+    relocate(index: number) {
+      // 同一张幻灯片在 dataSource 中的位置变化（如 images-change 重排）：
+      // 仅按 delta 重定基 currIndex/potentialIndex/各槽位逻辑索引，不导航、不动 scroll、
+      // 不轮转 holder。槽位 watcher 随后以同内容命中 Slide.updateData 的保留缩放路径；
+      // 相邻槽位数据若已不同则照常整体刷新。
+      const n = getNumItems();
+      if (n <= 0) return;
+      const i = Math.max(0, Math.min(index, n - 1));
+      const delta = i - currIndex;
+      if (!delta) return;
+      currIndex = i;
+      emit('update:currentIndex', i);
+      potentialIndex += delta;
+      itemHolders.forEach((holder) => {
+        if (holder.slotIndex !== undefined) {
+          setHolderLogicalIndex(holder.slotIndex, holderLogicalIndices[holder.slotIndex] + delta);
+        }
+      });
+      contentLoader.updateLazy(delta);
     },
     getContainerElement() {
       return domRefs.containerEl?.value ?? null;

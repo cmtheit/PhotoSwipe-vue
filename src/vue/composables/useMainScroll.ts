@@ -44,8 +44,14 @@ export function useMainScroll(host: MainScrollHost): MainScrollAPI {
     });
   }
 
+  // 对齐上游 main-scroll.js 的 getCurrSlideX（slideWidth * _currPositionIndex）语义：
+  // moveIndexBy 之后、updateCurrItem 结算之前，“当前逻辑位置”的静止 X 已是 pending 目标
+  // （本坐标系下为 -pendingDiff * slideWidth），而非 0。dragEnd 的 currentSlideVisibilityRatio、
+  // dragChange 的 mainScrollShiftDiff、moveTo 的边界摩擦、isShifted 都以它为基准——
+  // 若恒为 0，点按冻结结算动画后 dragEnd 会以旧幻灯片为基准把在途的一步再计一次
+  // （pendingDiff 累到 ±2，触发无动画直跳下下张）。
   function getCurrSlideX(): number {
-    return 0;
+    return -pendingDiff * slideWidth;
   }
 
   function moveTo(newX: number, dragging?: boolean): void {
@@ -93,7 +99,10 @@ export function useMainScroll(host: MainScrollHost): MainScrollAPI {
     const positionDifference = pendingDiff;
     if (!positionDifference) return;
 
-    scrollX = 0;
+    // 重定基而非清零：scrollX 改为相对新 curr 静止位（动画完成时恰为 0）。
+    // 提前结算（moveIndexBy 的 |pendingDiff| >= 2 路径）时保留剩余视觉位移，
+    // 轮转前后各 holder 的视觉位置不变，结算后动画可无缝继续补完。
+    scrollX += positionDifference * slideWidth;
     pendingDiff = 0;
 
     host.setCurrIndex(host.getPotentialIndex());
@@ -212,15 +221,14 @@ export function useMainScroll(host: MainScrollHost): MainScrollAPI {
     // （实测:中位滞留 curr-1，左右 swipe 渲染同一张图）。
     // 累积后恒有 pendingDiff === potentialIndex - currIndex，结算轮转数与索引跳变一致。
     pendingDiff += diff;
+    let destinationX = -pendingDiff * slideWidth;
     if (Math.abs(pendingDiff) >= 2) {
-      moveTo(0);
+      // 快速连滑（在途 1 步 + 新 1 步）或跨多张跳转：提前结算轮转 holder
+      // （对齐上游 |currDiff| > 1 时在动画途中 force updateCurrItem），
+      // updateCurrItem 重定基后 scrollX 保留剩余位移，动画继续补完而非瞬时直跳。
       updateCurrItem();
-      host.appendHeavy();
-      onSlideComplete?.();
-      return true;
+      destinationX = 0;
     }
-
-    const destinationX = -pendingDiff * slideWidth;
     if (!animate) {
       moveTo(destinationX);
       updateCurrItem();

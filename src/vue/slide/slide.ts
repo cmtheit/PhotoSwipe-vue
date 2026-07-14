@@ -183,6 +183,7 @@ export class Slide implements SlideInstance {
   updateData(newData: SlideData, newIndex?: number): void {
     const prevWidth = this.width;
     const prevHeight = this.height;
+    const prevKey = this.data?.id ?? this.data?.src;
 
     this.data = newData;
     if (typeof newIndex === 'number') {
@@ -192,6 +193,14 @@ export class Slide implements SlideInstance {
     this.height = Number(newData.h) || Number(newData.height) || 0;
 
     (this.content as Content).updateData(newData, this.index);
+
+    // 同一内容仅索引/对象引用变化（dataSource 重排导致的 relocate 或父层重建数组）：
+    // 保留用户当前缩放/平移，不回初始态。尺寸变化视为内容实质变化，仍走重置。
+    const newKey = newData?.id ?? newData?.src;
+    if (prevKey !== undefined && prevKey === newKey && this.width === prevWidth && this.height === prevHeight) {
+      return;
+    }
+
     this.calculateSize();
     this.zoomAndPanToInitial();
     this.applyCurrentZoomPan();

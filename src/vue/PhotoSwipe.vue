@@ -30,6 +30,7 @@
           @update:current-index="onSlideIndexChange"
           @request-close="onRequestClose"
           @toggleUI="onToggleUI"
+          @video-double-tap="emit('videoDoubleTap')"
           @bg-opacity-change="onBgOpacityChange"
           @slide-complete="isSliding = false"
           @reach-boundary="onReachBoundary"
@@ -348,9 +349,10 @@ watch(
     const foundIndex = newDataSource.findIndex((item, idx) => getSlideId(item, idx) === currentSlideId.value);
 
     if (foundIndex !== -1) {
-      // 找到且 index 变化
+      // 找到且 index 变化：同一张图片仅位置变化，重定基索引而非导航（goTo 会
+      // 轮转/重建 slide，清掉用户当前缩放平移）
       if (foundIndex !== currentIndex.value) {
-        slideViewRef.value?.goTo(foundIndex);
+        slideViewRef.value?.relocate(foundIndex);
         onSlideIndexChange(foundIndex, 'id-relocated');
       }
       // 找到且 index 不变：不做操作
