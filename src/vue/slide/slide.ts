@@ -226,14 +226,17 @@ export class Slide implements SlideInstance {
 
   updateContentSize(force?: boolean): void {
     const scaleMultiplier = this.currentResolution || this.zoomLevels.initial;
-    if (!scaleMultiplier) return;
+    if (!scaleMultiplier) {
+      return;
+    }
 
     const width =
       Math.round(this.width * scaleMultiplier) || this.host.viewportSize.x;
     const height =
       Math.round(this.height * scaleMultiplier) || this.host.viewportSize.y;
 
-    if (!this.sizeChanged(width, height) && !force) return;
+    const changed = this.sizeChanged(width, height);
+    if (!changed && !force) return;
     this.content.setDisplayedSize(width, height);
   }
 

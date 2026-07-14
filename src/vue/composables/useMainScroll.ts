@@ -178,9 +178,12 @@ export function useMainScroll(host: MainScrollHost): MainScrollAPI {
           index: host.getPotentialIndex(),
         });
       }
-      const destinationX = getCurrSlideX();
+      // 可能存在未结算的 pendingDiff（上一次动画被本次打断）：目标位置按累计量走，
+      // 完成后 updateCurrItem 结算（pendingDiff=0 时其为 no-op）。
+      const destinationX = -pendingDiff * slideWidth;
       if (!animate) {
         moveTo(destinationX);
+        updateCurrItem();
         onSlideComplete?.();
       } else {
         host.animations.startSpring({
@@ -192,6 +195,7 @@ export function useMainScroll(host: MainScrollHost): MainScrollAPI {
           dampingRatio: 1,
           onUpdate: (newX) => moveTo(newX),
           onComplete: () => {
+            updateCurrItem();
             host.appendHeavy();
             onSlideComplete?.();
           },
@@ -200,8 +204,15 @@ export function useMainScroll(host: MainScrollHost): MainScrollAPI {
       return false;
     }
 
-    pendingDiff = diff;
-    if (Math.abs(diff) >= 2) {
+    // 累积未结算位移（对齐上游 main-scroll.js 的 `_currPositionIndex -= diff` 语义）。
+    // 覆盖式赋值（pendingDiff = diff）是错的：快速连划时第二次 moveIndexBy 在上一次动画
+    // settle 前到达，potentialIndex 已累积（如 20→21→22），若 pendingDiff 只记最后一次的 1，
+    // updateCurrItem 会把 currIndex 直接跳到 potentialIndex（+2）却只轮转 1 个 holder ——
+    // holder 逻辑索引与 currIndex 从此永久错位，后续每次轮转把错位复制成相邻重复
+    // （实测:中位滞留 curr-1，左右 swipe 渲染同一张图）。
+    // 累积后恒有 pendingDiff === potentialIndex - currIndex，结算轮转数与索引跳变一致。
+    pendingDiff += diff;
+    if (Math.abs(pendingDiff) >= 2) {
       moveTo(0);
       updateCurrItem();
       host.appendHeavy();
@@ -209,7 +220,7 @@ export function useMainScroll(host: MainScrollHost): MainScrollAPI {
       return true;
     }
 
-    const destinationX = -diff * slideWidth;
+    const destinationX = -pendingDiff * slideWidth;
     if (!animate) {
       moveTo(destinationX);
       updateCurrItem();
