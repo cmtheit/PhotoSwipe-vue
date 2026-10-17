@@ -68,6 +68,11 @@ export interface ZoomState {
 
 export interface SlideViewProps {
   items: SlideData[];
+  /**
+   * 读最新数据源。父组件在自己的 pre watcher 里 relocate / goTo 时，子组件的 items prop 还是
+   * 上一帧（要等子组件更新才同步），按旧长度夹取下标会落到错误的幻灯片；传了就以它为准。
+   */
+  getItems?: () => SlideData[];
   currentIndex: number;
   /** 消费方通过 #slide 作用域插槽自定义幻灯片内容（图片/视频）时为 true */
   useSlideSlot?: boolean;
@@ -93,6 +98,7 @@ export interface SlideViewEmits {
   bgOpacityChange: [opacity: number];
   slideComplete: [];
   reachBoundary: [payload: { direction: 'prev' | 'next'; index: number }];
+  swipe: [payload: { direction: 'prev' | 'next'; index: number }];
 }
 
 export interface SlideViewExpose {
@@ -115,6 +121,8 @@ export interface SlideViewExpose {
   getContainerElement(): HTMLElement | null;
   getHolderElements(): HTMLDivElement[];
   isScrollShifted(): boolean;
+  /** 有用户手势发起、尚未结算的翻页（结算时会发 swipe） */
+  hasPendingUserMove(): boolean;
   resetScrollPosition(): void;
   resizeScroll(): void;
   appendHeavy(): void;
@@ -144,7 +152,10 @@ export interface UIEmits {
 export interface PhotoSwipeProps {
   /** 幻灯片数据源，默认 [] */
   dataSource?: SlideData[];
-  /** 当前显示的幻灯片索引（从 0 开始），支持 v-model:index，默认 0 */
+  /**
+   * 当前显示的幻灯片索引（从 0 开始），支持 v-model:index，默认 0。受控：dataSource / index 变化后
+   * 先按当前幻灯片 id 重定位，再收敛到 index（用户手势翻页结算前不收敛）。
+   */
   index?: number;
   /** 是否打开预览，支持 v-model:open，默认 false */
   open?: boolean;
@@ -207,6 +218,11 @@ export interface PhotoSwipeEmits {
   change: [payload: { index: number, reason?: string }];
   /** loop=false 时用户尝试越过首尾但索引未变化 */
   reachBoundary: [payload: { direction: 'prev' | 'next'; index: number }];
+  /**
+   * 用户手势翻页已落定（滑动动画结束）。与 change 不同，goTo、初始化、dataSource 重定位
+   * 等程序导航不触发；受控用法据此把「用户翻到了哪边」报给上层，上层回设 dataSource / index。
+   */
+  swipe: [payload: { direction: 'prev' | 'next'; index: number }];
   /** 关闭时触发 */
   close: [];
   /** 关闭动画结束、组件即将卸载时触发 */
@@ -365,10 +381,17 @@ export interface MainScrollAPI {
   resize(resizeSlides?: boolean): void;
   resetPosition(): void;
   moveTo(x: number, dragging?: boolean): void;
-  moveIndexBy(diff: number, animate?: boolean, velocityX?: number, onSlideComplete?: () => void): boolean;
+  moveIndexBy(
+    diff: number,
+    animate?: boolean,
+    velocityX?: number,
+    onSlideComplete?: () => void,
+    source?: 'user' | 'program',
+  ): boolean;
   getCurrSlideX(): number;
   getX(): number;
   isShifted(): boolean;
+  hasPendingUserMove(): boolean;
   updateCurrItem(): void;
   cancelPending(): void;
   setItemHolders(holders: ItemHolder[]): void;

@@ -116,7 +116,7 @@ export function useSlideView(
       const logicalIndex = holderLogicalIndices[slotIndex];
       const resolvedIndex = getResolvedIndex(logicalIndex);
       return {
-        item: getSlideDataByIndex(logicalIndex, props.items, canLoop()),
+        item: getSlideDataByIndex(logicalIndex, getItems(), canLoop()),
         dataIndex: resolvedIndex,
       };
     })
@@ -138,8 +138,12 @@ export function useSlideView(
     doubleTapAction: 'zoom',
   });
 
+  /** 优先读父组件给的实时数据源，见 SlideViewProps.getItems */
+  function getItems(): SlideData[] {
+    return props.getItems?.() ?? props.items ?? [];
+  }
   function getNumItems(): number {
-    return props.items?.length ?? 0;
+    return getItems().length;
   }
   function getLoopedIndex(index: number): number {
     const n = getNumItems();
@@ -151,7 +155,7 @@ export function useSlideView(
   }
   function getItemData(index: number): SlideData {
     const i = getLoopedIndex(index);
-    return props.items[i];
+    return getItems()[i];
   }
   function getItemKey(index: number, data = getItemData(index)): string {
     const stableKey = data?.id ?? data?.src ?? data?.srcset ?? data?.poster ?? data?.html;
@@ -240,7 +244,7 @@ export function useSlideView(
     // itemCountStop watcher 已被移除，由 PhotoSwipe.vue 的 dataSource watcher 处理
 
     const sourceVersionStop = watch(
-      () => props.items,
+      () => getItems(),
       () => {
         sourceVersion += 1;
       }
@@ -258,7 +262,7 @@ export function useSlideView(
         const resolvedIndex = getResolvedIndex(holderLogicalIndices[slotIndex]);
         const data = getSlideDataByIndex(
           holderLogicalIndices[slotIndex],
-          props.items,
+          getItems(),
           canLoop()
         );
         return {
@@ -333,6 +337,10 @@ export function useSlideView(
     const direction = e.direction === 'prev' ? 'prev' : 'next';
     const index = typeof e.index === 'number' ? e.index : currIndex;
     emit('reachBoundary', { direction, index });
+  });
+
+  eventable.on('swipe', (e: any) => {
+    emit('swipe', { direction: e.diff < 0 ? 'prev' : 'next', index: currIndex });
   });
 
   const ctx = {
@@ -637,7 +645,7 @@ export function useSlideView(
       // 已在该索引或正在动画前往：直接返回。提前结算会在动画途中 dispatch change，
       // 父层 :index 回声若走 moveIndexBy(0) 会 stopMainScroll 打断在途结算动画。
       if (!diff) return;
-      mainScroll?.moveIndexBy(diff, true, undefined, () => emit('slideComplete'));
+      mainScroll?.moveIndexBy(diff, true, undefined, () => emit('slideComplete'), 'program');
     },
     relocate(index: number) {
       // 同一张幻灯片在 dataSource 中的位置变化（如 images-change 重排）：
@@ -667,6 +675,9 @@ export function useSlideView(
     },
     isScrollShifted() {
       return mainScroll?.isShifted?.() ?? false;
+    },
+    hasPendingUserMove() {
+      return mainScroll?.hasPendingUserMove?.() ?? false;
     },
     resetScrollPosition() {
       mainScroll?.resetPosition?.();

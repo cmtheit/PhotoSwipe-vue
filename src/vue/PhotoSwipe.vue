@@ -14,6 +14,7 @@
         <PswpSlideView
           ref="slideViewRef"
           :items="dataSource"
+          :get-items="getItems"
           :current-index="currentIndex"
           :use-slide-slot="hasSlideSlot"
           :loop="loop"
@@ -34,6 +35,7 @@
           @bg-opacity-change="onBgOpacityChange"
           @slide-complete="isSliding = false"
           @reach-boundary="onReachBoundary"
+          @swipe="onSwipe"
         >
           <template v-if="hasSlideSlot" #slide="slotProps">
             <slot name="slide" v-bind="slotProps" />
@@ -115,6 +117,8 @@ const bgRef = ref<HTMLElement | null>(null);
 const slideViewRef = ref<InstanceType<typeof PswpSlideView> | null>(null);
 
 const isMounted = ref(false);
+/** runInit 之后到关闭动画结束之前为 true：slideView 已按本轮数据初始化，可以重定位 / 导航 */
+let slidesReady = false;
 const currentIndex = ref(0);
 const currentSlideId = ref<string | null>(null);
 const isSliding = ref(false);
@@ -132,6 +136,8 @@ function onToggleUI() {
 }
 
 const dataSource = computed<SlideData[]>(() => props.dataSource ?? []);
+/** 交给 slideView 读实时数据源：本组件 watcher 里重定位 / 导航时它的 items prop 还没更新 */
+const getItems = () => dataSource.value;
 const totalItems = computed(() => dataSource.value.length);
 const currentItem = computed(() => dataSource.value[currentIndex.value] ?? null);
 
@@ -246,6 +252,7 @@ const openerCtx = {
     openerIsOpen.value = false;
     uiVisible.value = false;
     isMounted.value = false;
+    slidesReady = false;
     emit('update:open', false);
     emit('close');
     emit('destroy');
@@ -286,6 +293,7 @@ function runInit() {
     currentSlideId.value = getSlideId(data, idx);
   }
   slideViewRef.value?.init(idx);
+  slidesReady = true;
   opener.open();
 }
 
@@ -308,6 +316,8 @@ watch(
       }
       emit('beforeOpen');
       isMounted.value = true;
+      // 关闭动画途中重新打开：旧一轮的 slideView 状态作废，等 runInit 按新 index 重新初始化
+      slidesReady = false;
       nextTick(() => {
         runInit();
         emit('afterInit');
@@ -326,54 +336,42 @@ onBeforeUnmount(() => {
   if (popstateUnsubscribe) popstateUnsubscribe();
 });
 
+/**
+ * dataSource 与 index 是一个受控状态（「这份列表 + 当前是第几张」），合在一个 watcher 里按固定顺序收敛：
+ * 1. 先按当前幻灯片的 id 在新列表里重定位（relocate：不导航、保留缩放）；找不到就原地换成
+ *    index 指向的那张。
+ * 2. 再导航到 index。
+ * 上层常把两者一起换掉（如滑动窗口平移）。拆成两个 watcher 时谁先跑取决于 prop 赋值顺序，
+ * index 先跑会在旧列表的坐标系里 goTo，带动画倒退一张。合并后上层回设的状态与当前显示一致时整轮是 no-op。
+ *
+ * 用户手势翻页还没结算时不导航：此刻上层还没收到 swipe，index 必然是旧的，强行收敛会把
+ * 用户刚滑出去的那张拉回来；结算后上层回设，再走这里收敛。
+ */
 watch(
-  () => props.index,
-  (newIndex) => {
-    if (props.open && isMounted.value) {
-      const idx = clampIndex(newIndex);
-      currentIndex.value = idx;
-      slideViewRef.value?.goTo(idx);
-    }
-  }
-);
-
-watch(
-  dataSource,
+  [dataSource, () => props.index],
   () => {
-    if (!currentSlideId.value || dataSource.value.length === 0) {
+    if (!isMounted.value || !slidesReady) return; // 未初始化：runInit 会直接按 index 打开
+    const list = dataSource.value;
+    if (list.length === 0) {
+      handleClose();
       return;
     }
+    const target = clampIndex(props.index);
 
-    // 在新 dataSource 中查找之前持有的 slide ID
-    const newDataSource = dataSource.value;
-    const foundIndex = newDataSource.findIndex((item, idx) => getSlideId(item, idx) === currentSlideId.value);
-
+    const foundIndex = currentSlideId.value
+      ? list.findIndex((item, idx) => getSlideId(item, idx) === currentSlideId.value)
+      : -1;
+    // relocate 下标有变化时自己会经 update:currentIndex 走 onSlideIndexChange
     if (foundIndex !== -1) {
-      // 找到且 index 变化：同一张图片仅位置变化，重定基索引而非导航（goTo 会
-      // 轮转/重建 slide，清掉用户当前缩放平移）
-      if (foundIndex !== currentIndex.value) {
-        slideViewRef.value?.relocate(foundIndex);
-        onSlideIndexChange(foundIndex, 'id-relocated');
-      }
-      // 找到且 index 不变：不做操作
+      slideViewRef.value?.relocate(foundIndex);
     } else {
-      // 没找到
-      if (newDataSource.length === 0) {
-        // 列表为空：关闭预览
-        handleClose();
-      } else if (newDataSource.length <= currentIndex.value) {
-        // 超出边界：导航到最后一张
-        const lastIndex = newDataSource.length - 1;
-        slideViewRef.value?.goTo(lastIndex);
-        onSlideIndexChange(lastIndex, 'bounds-exceeded');
-      } else {
-        // 在边界内：保持 index，更新 currentSlideId
-        const data = newDataSource[currentIndex.value];
-        if (data) {
-          currentSlideId.value = getSlideId(data, currentIndex.value);
-        }
-      }
+      // 当前这张已不在列表里：原地换成上层指定的那张，不做翻页动画
+      slideViewRef.value?.relocate(target);
+      if (currentSlideId.value !== getSlideId(list[target]!, target)) onSlideIndexChange(target, 'reset');
     }
+
+    if (!props.open || slideViewRef.value?.hasPendingUserMove?.()) return;
+    slideViewRef.value?.goTo(target); // 已在 / 正前往 target 时 goTo 自身是 no-op
   },
   { deep: true }
 );
@@ -415,6 +413,10 @@ function onBgOpacityChange(opacity: number) {
 
 function onReachBoundary(payload: { direction: 'prev' | 'next'; index: number }) {
   emit('reachBoundary', payload);
+}
+
+function onSwipe(payload: { direction: 'prev' | 'next'; index: number }) {
+  emit('swipe', payload);
 }
 
 function handleClose() {

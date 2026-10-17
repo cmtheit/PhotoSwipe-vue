@@ -34,6 +34,8 @@ export function useMainScroll(host: MainScrollHost): MainScrollAPI {
   let scrollX = 0;
   let slideWidth = 0;
   let pendingDiff = 0;
+  /** pendingDiff 中由用户手势发起的部分；结算时据此发 `swipe`，程序导航（goTo）不计入 */
+  let pendingUserDiff = 0;
   let itemHolders: ItemHolder[] = [];
 
   function applyTransforms(): void {
@@ -93,6 +95,7 @@ export function useMainScroll(host: MainScrollHost): MainScrollAPI {
     scrollX = 0;
     slideWidth = 0;
     pendingDiff = 0;
+    pendingUserDiff = 0;
   }
 
   function updateCurrItem(): void {
@@ -104,6 +107,8 @@ export function useMainScroll(host: MainScrollHost): MainScrollAPI {
     // 轮转前后各 holder 的视觉位置不变，结算后动画可无缝继续补完。
     scrollX += positionDifference * slideWidth;
     pendingDiff = 0;
+    const userDiff = pendingUserDiff;
+    pendingUserDiff = 0;
 
     host.setCurrIndex(host.getPotentialIndex());
 
@@ -160,10 +165,21 @@ export function useMainScroll(host: MainScrollHost): MainScrollAPI {
     const curr = host.getCurrSlide();
     if (curr) curr.applyCurrentZoomPan();
     host.dispatch('change');
+    // 用户手势翻页已落定：与 change 分开，change 也会由 goTo / 初始化等程序导航触发
+    if (userDiff) host.dispatch('swipe', { diff: userDiff });
     applyTransforms();
   }
 
-  function moveIndexBy(diff: number, animate?: boolean, velocityX?: number, onSlideComplete?: () => void): boolean {
+  /**
+   * @param source 'user' = 手势 / 点按翻页（默认），结算后额外发 `swipe`；'program' = goTo 等程序导航
+   */
+  function moveIndexBy(
+    diff: number,
+    animate?: boolean,
+    velocityX?: number,
+    onSlideComplete?: () => void,
+    source: 'user' | 'program' = 'user',
+  ): boolean {
     const requestedDiff = diff;
     let newIndex = host.getPotentialIndex() + diff;
     const numSlides = host.getNumItems();
@@ -221,6 +237,7 @@ export function useMainScroll(host: MainScrollHost): MainScrollAPI {
     // （实测:中位滞留 curr-1，左右 swipe 渲染同一张图）。
     // 累积后恒有 pendingDiff === potentialIndex - currIndex，结算轮转数与索引跳变一致。
     pendingDiff += diff;
+    if (source === 'user') pendingUserDiff += diff;
     let destinationX = -pendingDiff * slideWidth;
     if (Math.abs(pendingDiff) >= 2) {
       // 快速连滑（在途 1 步 + 新 1 步）或跨多张跳转：提前结算轮转 holder
@@ -258,6 +275,7 @@ export function useMainScroll(host: MainScrollHost): MainScrollAPI {
 
   function cancelPending(): void {
     pendingDiff = 0;
+    pendingUserDiff = 0;
     scrollX = 0;
     applyTransforms();
   }
@@ -275,6 +293,7 @@ export function useMainScroll(host: MainScrollHost): MainScrollAPI {
     getCurrSlideX,
     getX: () => scrollX,
     isShifted,
+    hasPendingUserMove: () => pendingUserDiff !== 0,
     updateCurrItem,
     cancelPending,
     setItemHolders,

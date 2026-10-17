@@ -26,6 +26,13 @@ export function useOpener(ctx: OpenerCtx): OpenerAPI {
   /** 打开时延迟 _initiate 的 timer，用于在 close 中途取消时清除，避免后续再次触发 _initiate */
   let _openTimer1: ReturnType<typeof setTimeout> | undefined = undefined;
   let _openTimer2: ReturnType<typeof setTimeout> | undefined = undefined;
+  /**
+   * 动画轮次：每次 open / close 开一轮新的。被打断的旧动画在 destroy 里会同步回调
+   * onComplete，若不按轮次作废，就会拿新一轮的状态收尾——例如关闭动画中途重新打开：
+   * stopAll 让旧关闭动画按「打开完成」收尾（isOpening 被清掉），后面设置打开起始样式
+   * 的分支被跳过，根节点停在关闭留下的 opacity 0，预览看不见却处于打开状态。
+   */
+  let _generation = 0;
 
   function _applyStartProps(): void {
     const options = ctx.getOptions();
@@ -141,6 +148,7 @@ export function useOpener(ctx: OpenerCtx): OpenerAPI {
       return;
     }
     const options = ctx.getOptions();
+    const generation = _generation;
     const anims = ctx.animations as unknown as {
       activeAnimations: unknown[];
       startTransition(p: { target: HTMLElement; duration?: number; easing?: string; onComplete?: () => void; transform?: string; opacity?: string }): void;
@@ -151,6 +159,7 @@ export function useOpener(ctx: OpenerCtx): OpenerAPI {
       easing: (options.easing as string) ?? 'cubic-bezier(.4,0,.22,1)',
       [prop]: propValue,
       onComplete: () => {
+        if (generation !== _generation) return;
         if (!anims.activeAnimations?.length) {
           _onAnimationComplete();
         }
@@ -301,12 +310,14 @@ export function useOpener(ctx: OpenerCtx): OpenerAPI {
       _placeholder.tagName === 'IMG'
     ) {
       const img = _placeholder as HTMLImageElement;
+      const generation = _generation;
       let decoded = false;
       let isDelaying = true;
       decodeImage(img)
         .finally(() => {
           decoded = true;
-          if (!isDelaying) _initiate();
+          // 解码回调不像两个 timer 能被 _clearOpenTimers 清掉，过期轮次只能在这里拦下。
+          if (!isDelaying && generation === _generation) _initiate();
         })
         .catch(() => {});
       _openTimer1 = setTimeout(() => {
@@ -325,6 +336,7 @@ export function useOpener(ctx: OpenerCtx): OpenerAPI {
 
   function _prepareOpen(): void {
     if (!isOpening) {
+      _generation++;
       isOpening = true;
       isClosing = false;
       const options = ctx.getOptions();
@@ -360,6 +372,7 @@ export function useOpener(ctx: OpenerCtx): OpenerAPI {
     const initialZoom = ctx.slideView.getCurrentSlideInitialZoom();
 
     const wasOpening = isOpening;
+    _generation++;
     isOpen = false;
     isOpening = false;
     isClosing = true;
@@ -381,7 +394,10 @@ export function useOpener(ctx: OpenerCtx): OpenerAPI {
     }
 
     _applyStartProps();
-    setTimeout(() => _start(), _croppedZoom ? 30 : 0);
+    const generation = _generation;
+    setTimeout(() => {
+      if (generation === _generation) _start();
+    }, _croppedZoom ? 30 : 0);
   }
 
   return {
