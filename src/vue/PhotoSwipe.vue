@@ -72,12 +72,6 @@ const slots = useSlots();
 /** 消费方是否提供了 #slide 作用域插槽（自定义每张幻灯片渲染） */
 const hasSlideSlot = computed(() => !!slots.slide);
 
-watch(hasSlideSlot,() => {
-  console.log('has slide slot', hasSlideSlot.value)
-}, {
-  immediate: true
-})
-
 import { getViewportSize } from './utils/viewport';
 import { getThumbBounds } from './utils/thumb-bounds';
 import { Animations } from './core/animations';

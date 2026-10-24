@@ -74,7 +74,9 @@ export class Slide implements SlideInstance {
     this.index = index;
     this.host = host;
     this.slot = slot;
-    this.isActive = index === (host.currSlide?.index ?? -1);
+    // 不能用 host.currSlide.index：relocate 平移窗口后旧的当前 slide 要等槽位 watcher
+    // 才 updateData 改 index，期间新建的相邻 slide 会撞上旧 index 被误判激活（视频跟着播放）
+    this.isActive = index === host.currIndex;
     this.bounds = createPanBounds();
     this._getContainerEl = domRefs.getContainerEl;
     this._getImageEl = domRefs.getImageEl;

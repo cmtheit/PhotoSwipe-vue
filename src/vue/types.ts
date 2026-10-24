@@ -346,6 +346,8 @@ export interface SlideHost {
   getViewportCenterPoint(): Point;
   opener?: { isOpen: boolean };
   currSlide: SlideInstance | null;
+  /** 当前下标；relocate 后先于各槽位 slide.index 更新，判定激活以它为准 */
+  currIndex: number;
 }
 
 /** Animations 最小接口（Slide 仅需 startTransition、stopAllPan） */
